@@ -76,7 +76,11 @@ cd frontend
 npm run dev
 ```
 
-Open http://localhost:5173 with the backend running. The dev server forwards `/api` and `/static` to the backend on port 8000. The first sample patient loads by itself; pick another sample or edit any input and the estimates, the artery colours and the explanations update. Drag the heart to rotate it, scroll to zoom, and click an artery (or its row in the list) to see that vessel's explanation. The Model & method tab is not built yet.
+Open http://localhost:5173 with the backend running. The dev server forwards `/api` and `/static` to the backend on port 8000. The first sample patient loads by itself; pick another sample or edit any input and the estimates, the artery colours and the explanations update. Drag the heart to rotate it, scroll to zoom, and click an artery (or its row in the list) to see that vessel's explanation.
+
+- **What-if.** The quick controls hold the eight inputs that matter most to the four models on average. Change one and each estimate shows how it moved ("58% → 51%, −7 pp"); "Reset to original" brings the loaded patient back. This shows how the model responds to changed inputs, not the effect of any treatment.
+- **Dataset labels.** For an unmodified sample patient, "Show dataset angiography result" puts the dataset's label next to each estimate, with a mark for whether the model's prediction matches it. The six sample patients were never used for training or validation.
+- **Model & method.** The second tab shows how the models were validated: the method, the cross-validated metrics of every candidate and the baseline, the ROC, calibration and confusion plots, the most important inputs per target, the limitations and the credits.
 
 ## Tests
 
@@ -92,11 +96,12 @@ npm run test
 npm run build
 ```
 
+The backend suite takes about 40 seconds: besides the unit and API tests it trains all four models once, with a single repeat of the cross-validation, into a temporary folder, and checks that the API can serve the result. It never writes to `backend/artifacts/`. The frontend tests run against a mocked API and need no backend.
+
 ## Project structure
 
 ```text
 CardioLens/
-├── CLAUDE_RULES.md
 ├── README.md
 ├── docs/               # specification
 ├── backend/
@@ -146,4 +151,4 @@ Dataset page: https://archive.ics.uci.edu/dataset/411/extention+of+z+alizadeh+sa
 
 ## Documentation
 
-The full specification is in [`docs/`](docs/): [problem analysis](docs/PROBLEM_ANALYSIS.md) · [product spec](docs/PRODUCT_SPEC.md) · [architecture](docs/ARCHITECTURE.md) · [API contract](docs/API_CONTRACT.md) · [data model](docs/DATA_MODEL.md) · [build map](docs/BUILD_MAP.md) · [decisions](docs/DECISIONS.md) · [demo flow](docs/DEMO_FLOW.md)
+The full specification is in [`docs/`](docs/): [problem analysis](docs/PROBLEM_ANALYSIS.md) · [product spec](docs/PRODUCT_SPEC.md) · [architecture](docs/ARCHITECTURE.md) · [API contract](docs/API_CONTRACT.md) · [data model](docs/DATA_MODEL.md) · [build map](docs/BUILD_MAP.md) · [demo flow](docs/DEMO_FLOW.md)

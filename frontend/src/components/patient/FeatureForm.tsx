@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import type { FeatureGroupId, FeatureSchema } from "../../api/types";
+import { ALL_INPUTS_HEADING } from "../../config/copy";
 import { useMeta } from "../../state/MetaContext";
 import type { FormValue, FormValues } from "../../state/validation";
 import { FeatureField } from "./FeatureField";
@@ -33,7 +34,7 @@ export function FeatureForm({ values, errors, onEdit }: FeatureFormProps) {
   }
 
   return (
-    <div className="divide-y divide-line rounded-lg border border-line">
+    <div role="group" aria-label={ALL_INPUTS_HEADING} className="divide-y divide-line rounded-lg border border-line">
       {meta.feature_groups.map((group) => {
         const features = meta.features.filter((feature) => feature.group === group.id);
         const invalid = features.filter((feature) => errors[feature.id]).length;

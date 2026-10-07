@@ -1,9 +1,9 @@
 # Demo Flow
 
-**Status:** v0.1 — approved by Satvik (T0.2) · **Date:** 2026-10-07
+**Status:** v0.2 — v0.1 approved by Satvik (T0.2); the steps that waited for real models were filled in at T9.3 and are for Satvik's review · **Date:** 2026-10-07
 
 > Judges receive the Devpost submission (repo + video), so the **YouTube video** (§3) is the primary demo. The live script (§2) is for any live session or Q&A during judging (Oct 15–20).
-> Anything marked **[after T3.4]** depends on real trained models and is filled in only from real outputs, never guessed.
+> The steps that depend on the trained models were filled in on 2026-10-07 from the running app (model version `20261007T1423Z-7393432`), never guessed. If the models are retrained, check these numbers again.
 
 ---
 
@@ -12,7 +12,8 @@
 - **Sample patients A–F:** held out from all training and validation (DATA_MODEL §5.3). Sample A loads automatically on first visit.
 - **Start from typical values:** training median/mode for every feature.
 - **Reset demo** (header): Sample A, no modifications, `cad` selected, camera reset.
-- **Reset to original** (input panel): undo what-if edits for the loaded patient.
+- **Reset to original** (Patient card, shown while inputs are modified): undo what-if edits for the loaded patient.
+- **Held-out results** (model version above): the model's predictions match the dataset labels for 4 of 4 targets on Samples A, B, C and F, 3 of 4 on Sample E (CAD) and 2 of 4 on Sample D (LAD, RCA). Six patients are an illustration, not an evaluation; the performance numbers are the cross-validated ones.
 
 **Before any demo or recording:**
 1. `python -m ml.train` has been run; `/api/health` returns 200.
@@ -27,10 +28,10 @@
 | 0:00 | App open on Sample A | "A risk percentage doesn't tell you which artery a model is worried about. CardioLens maps four model estimates onto the vessels they describe." Point at the banner: "Educational decision support, not diagnosis." | Problem clarity, SAFE-1 |
 | 0:15 | Point to CAD card and vessel list | "Overall CAD, plus LAD, LCX and RCA — each from its own model, each colored on its own artery." Read the legend note. | DASH-1, VIS-2 |
 | 0:35 | Rotate, zoom, press **Back** | "LCX and RCA run around the side and bottom, so the view presets help." Hover an artery → tooltip. | VIS-1, VIS-3 |
-| 0:55 | Click an artery **[after T3.4: pick the most interesting vessel for Sample A]** | "Clicking a vessel opens that vessel's explanation." | DIFF-3 |
+| 0:55 | Click the **LCX** artery (suggested: its explanation differs most from the CAD one) | "Clicking a vessel opens that vessel's explanation." Sample A: LAD 58%, LCX 60%, RCA 52%. Top factor per vessel: LAD regions with RWMA, LCX creatinine (1.5 mg/dL, 96th percentile), RCA diabetes mellitus | DIFF-3 |
 | 1:10 | Read the explanation | "These are SHAP contributions: what pushed this estimate up or down, with the patient's value and where it sits in the dataset." | DASH-2, DASH-3 |
-| 1:35 | Change the top quick control **[after T3.4]** | "What-if: the colors, probabilities and explanations update live. This is model sensitivity, not a treatment effect." Then **Reset to original**. | DIFF-1, real-time integration |
-| 2:00 | Toggle **Show dataset angiography result** | "Sample A was held out from training. Here is what the angiography actually showed — including where the model is wrong." | DIFF-2 |
+| 1:35 | Switch the top quick control, **Typical chest pain**, off | "What-if: the colors, probabilities and explanations update live. This is model sensitivity, not a treatment effect." Sample A: LAD 58% → 51%, LCX 60% → 57%, RCA 52% → 37% and its status becomes "Stenosis not predicted"; CAD >99% → 98%. Then **Reset to original**. | DIFF-1, real-time integration |
+| 2:00 | Toggle **Show dataset angiography result**, then load **Sample D** | "These sample patients were held out from training. For Sample A the model's four predictions match what the angiography recorded. For Sample D it is wrong on two vessels: it predicts LAD and RCA stenosis, the dataset says Normal — and the app shows that too." (Sample E is the other miss: CAD predicted at 91%, dataset label Normal.) | DIFF-2 |
 | 2:20 | Open **Model & method** | "Repeated stratified 5-fold cross-validation, mean ± std, against a baseline, with the label columns excluded from every model." | PM-4, PM-5 |
 | 2:45 | Close | "Four models, one heart, every estimate explained — for education and decision support." | — |
 
@@ -47,7 +48,7 @@ Requirements (SG 3, PS): shows the project **running**, explains the approach, c
 | 5. Explanations | 0:45 | Per-vessel SHAP, values, percentiles, summary |
 | 6. What-if + ground truth | 0:45 | Live update, deltas, reset; reveal on a held-out sample |
 | 7. Technical implementation | 1:30 | Architecture diagram (ARCHITECTURE §1); leakage guard; repeated CV and model selection; SHAP grouping of one-hot features; one target-id key across API and 3D; 3D performance choices |
-| 8. Results | 0:30 | Real metrics table from the Model & method tab **[after T3.4]** — no rounding up, no cherry-picking |
+| 8. Results | 0:30 | Real metrics table from the Model & method tab — no rounding up, no cherry-picking. Say both sides: CAD ROC-AUC 0.917 ± 0.033; the vessel models are weaker, LCX 0.739 ± 0.056 and RCA 0.725 ± 0.045 |
 | 9. Limitations and close | 0:20 | PRODUCT_SPEC §9.4 in brief; thank you |
 
 ## 4. Manual end-to-end checklist (T9.3 and before recording)

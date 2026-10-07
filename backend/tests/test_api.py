@@ -1,6 +1,7 @@
 """T4.1 to T4.4: the API served from the real artifacts."""
 
 import json
+import logging
 import shutil
 import time
 
@@ -24,6 +25,8 @@ from ml.config import (
 )
 
 JSON = {"Content-Type": "application/json"}
+# Loggers of the application and of the server stack it runs on.
+SERVER_LOGGERS = {"root", "app", "ml", "fastapi", "starlette", "uvicorn"}
 
 
 def read(name: str):
@@ -396,6 +399,20 @@ def test_extra_top_level_key_is_rejected(client, features):
 def test_validation_errors_do_not_echo_the_values(client, features):
     features["sex"] = "private-value-123"
     assert "private-value-123" not in predict(client, features).text
+
+
+def test_the_service_logs_nothing_about_a_request(client, features, caplog):
+    """BR-12: inputs are not logged, neither for an accepted request nor for a rejected one."""
+    caplog.set_level(logging.DEBUG)
+    rejected = {**features, "sex": "private-value-123"}
+
+    assert predict(client, features).status_code == 200
+    assert predict(client, rejected).status_code == 422
+
+    # The test client's own HTTP library may log the call; the application and its server stack may not.
+    server = [record for record in caplog.records if record.name.split(".")[0] in SERVER_LOGGERS]
+    assert server == []
+    assert not any("private-value-123" in record.getMessage() for record in caplog.records)
 
 
 def test_oversized_predict_body_returns_413(client, features):

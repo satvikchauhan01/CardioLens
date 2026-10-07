@@ -4,6 +4,7 @@ import { predictResponse, SAMPLES } from "../test/fixtures";
 import {
   analysisReducer,
   initialAnalysisState,
+  modifiedFields,
   type AnalysisAction,
   type AnalysisState,
 } from "./analysisReducer";
@@ -161,5 +162,49 @@ describe("analysis state machine (PRODUCT_SPEC §6.2)", () => {
 
   it("ignores edits before a patient is loaded", () => {
     expect(run(edit(1))).toBe(initialAnalysisState);
+  });
+});
+
+describe("what-if (BR-10)", () => {
+  it("counts the fields that differ from the loaded patient", () => {
+    expect(modifiedFields(initialAnalysisState)).toEqual([]);
+    expect(modifiedFields(run(load(1), ok(1)))).toEqual([]);
+    expect(modifiedFields(run(load(1), ok(1), edit(2)))).toEqual(["age"]);
+
+    const two = run(load(1), ok(1), edit(2), { type: "EDIT", requestId: 3, field: "dm", value: false });
+    expect(modifiedFields(two)).toEqual(["age", "dm"]);
+
+    // Typing the original value back is not a modification.
+    expect(modifiedFields(run(load(1), ok(1), edit(2), edit(3, 60)))).toEqual([]);
+    // An emptied field counts.
+    expect(modifiedFields(run(load(1), ok(1), edit(2, null)))).toEqual(["age"]);
+  });
+
+  it("RESET restores the loaded values and their result without a request", () => {
+    const edited = run(load(1), ok(1), edit(2), { type: "REQUEST", requestId: 2 }, ok(2, RESULT_EDITED));
+    const state = analysisReducer(edited, { type: "RESET", requestId: 3 });
+
+    expect(state.status).toBe("ready");
+    expect(state.values).toBe(A.features);
+    expect(state.result).toBe(RESULT_A);
+    expect(state.lastGoodResult).toBe(RESULT_A);
+    expect(state.originalResult).toBe(RESULT_A);
+    expect(modifiedFields(state)).toEqual([]);
+  });
+
+  it("RESET clears field errors and makes the response still in flight stale", () => {
+    const errors = { age: "This value is required." };
+    const invalid = run(load(1), ok(1), edit(2, null), { type: "INVALID", requestId: 2, errors });
+    expect(analysisReducer(invalid, { type: "RESET", requestId: 3 })).toMatchObject({ status: "ready", fieldErrors: {} });
+
+    const pending = run(load(1), ok(1), edit(2), { type: "REQUEST", requestId: 2 });
+    const reset = analysisReducer(pending, { type: "RESET", requestId: 3 });
+    expect(analysisReducer(reset, ok(2, RESULT_EDITED))).toBe(reset);
+  });
+
+  it("RESET does nothing before the loaded patient has a result", () => {
+    const loading = run(load(1));
+    expect(analysisReducer(loading, { type: "RESET", requestId: 2 })).toBe(loading);
+    expect(analysisReducer(initialAnalysisState, { type: "RESET", requestId: 1 })).toBe(initialAnalysisState);
   });
 });

@@ -138,7 +138,7 @@ Rules: each request gets an increasing id; responses with an older id are discar
 
 **BR-13 Validation.** All features required. Numeric: finite; integer when the schema says `integer`; within the dataset range [min, max] observed across the inputs of all 303 rows (D-018). Binary: boolean. Categorical/ordinal: one of the schema's categories. Unknown fields rejected. The frontend sends nothing while invalid; the backend re-validates (HTTP 422).
 
-**BR-14 Display.** Probabilities as integer % (e.g., "58%"). Measurements per schema unit and step. Relative contribution as integer %, or "<1%" when 0 < |r| < 0.5%.
+**BR-14 Display.** Probabilities as integer % (e.g., "58%"); a value that would round to 100% or 0% is shown as ">99%" or "<1%", because a model is never certain (D-056). Measurements per schema unit and step. Relative contribution as integer %, or "<1%" when 0 < |r| < 0.5%.
 
 ## 8. AI behavior
 

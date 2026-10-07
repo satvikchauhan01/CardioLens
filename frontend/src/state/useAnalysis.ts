@@ -16,6 +16,7 @@ export interface Analysis {
   loadTypical: () => void;
   edit: (field: string, value: FormValue) => void;
   retry: () => void;
+  resetToOriginal: () => void;
 }
 
 export function useAnalysis(features: FeatureSchema[], predict: Predict = predictViaApi): Analysis {
@@ -25,6 +26,11 @@ export function useAnalysis(features: FeatureSchema[], predict: Predict = predic
   const invalid = useRef(false);
   const sequence = useRef(0);
   const timer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
+  // The rendered state, for handlers that decide by it without being re-created on every change.
+  const latest = useRef(state);
+  useEffect(() => {
+    latest.current = state;
+  }, [state]);
 
   useEffect(() => () => clearTimeout(timer.current), []);
 
@@ -91,5 +97,19 @@ export function useAnalysis(features: FeatureSchema[], predict: Predict = predic
     submit(sequence.current);
   }, [submit]);
 
-  return { state, loadSample, loadTypical, edit, retry };
+  const resetToOriginal = useCallback(() => {
+    const { source, sampleId, loadedValues, originalResult } = latest.current;
+    if (!source || !loadedValues) return;
+    clearTimeout(timer.current);
+    if (!originalResult) {
+      // The loaded patient was never predicted successfully: load it again.
+      load(source, sampleId, loadedValues);
+      return;
+    }
+    values.current = loadedValues;
+    invalid.current = false;
+    dispatch({ type: "RESET", requestId: ++sequence.current });
+  }, [load]);
+
+  return { state, loadSample, loadTypical, edit, retry, resetToOriginal };
 }

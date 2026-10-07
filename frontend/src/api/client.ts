@@ -6,6 +6,7 @@ import type {
   FeatureValue,
   FieldError,
   MetaResponse,
+  MetricsResponse,
   PredictResponse,
   SamplesResponse,
 } from "./types";
@@ -70,6 +71,10 @@ export function getMeta(): Promise<MetaResponse> {
 
 export function getSamples(): Promise<SamplesResponse> {
   return request<SamplesResponse>("/samples");
+}
+
+export function getMetrics(): Promise<MetricsResponse> {
+  return request<MetricsResponse>("/metrics");
 }
 
 export function predict(features: Record<string, FeatureValue>): Promise<PredictResponse> {

@@ -24,6 +24,7 @@ export function PatientAnalysisView({ samples, resetCount = 0 }: PatientAnalysis
   const [selectedTarget, setSelectedTarget] = useState<TargetId>("cad");
   const [hoveredVessel, setHoveredVessel] = useState<VesselId | null>(null);
   const [viewRequest, setViewRequest] = useState<ViewRequest | null>(null);
+  const [showGroundTruth, setShowGroundTruth] = useState(false);
 
   const requestView = useCallback(
     (view: ViewId) => setViewRequest((current) => ({ view, nonce: (current?.nonce ?? 0) + 1 })),
@@ -46,6 +47,7 @@ export function PatientAnalysisView({ samples, resetCount = 0 }: PatientAnalysis
     loadSample(samples[0]);
     setSelectedTarget("cad");
     setHoveredVessel(null);
+    setShowGroundTruth(false);
     requestView("reset");
   }, [resetCount, samples, loadSample, requestView]);
 
@@ -66,6 +68,7 @@ export function PatientAnalysisView({ samples, resetCount = 0 }: PatientAnalysis
 
   // Not ready: the viewer keeps the colours of the last good result, like the results panel.
   const shown = state.status === "ready" ? state.result : state.lastGoodResult;
+  const loadedSample = state.source === "sample" ? samples.find((sample) => sample.id === state.sampleId) : undefined;
 
   return (
     <div className="grid items-start gap-6 md:grid-cols-2 xl:grid-cols-[340px_minmax(0,1fr)_380px]">
@@ -89,6 +92,9 @@ export function PatientAnalysisView({ samples, resetCount = 0 }: PatientAnalysis
         onSelectTarget={selectFromList}
         onHoverTarget={hoverFromList}
         onRetry={analysis.retry}
+        groundTruth={loadedSample?.ground_truth ?? null}
+        showGroundTruth={showGroundTruth}
+        onShowGroundTruth={setShowGroundTruth}
       />
     </div>
   );

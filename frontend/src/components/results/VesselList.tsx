@@ -4,7 +4,8 @@
 import type { TargetId, TargetInfo, TargetPrediction } from "../../api/types";
 import { STATUS_TEXT, VESSELS_LABEL } from "../../config/copy";
 import { riskColor } from "../../config/risk";
-import { formatPercent } from "../../utils/format";
+import { formatPercent, percentPoints } from "../../utils/format";
+import { EstimateNotes } from "./EstimateNotes";
 
 interface VesselListProps {
   targets: TargetInfo[];
@@ -14,6 +15,8 @@ interface VesselListProps {
   hoveredTarget?: TargetId | null;
   onSelectTarget: (target: TargetId) => void;
   onHoverTarget?: (target: TargetId | null) => void;
+  originals?: Record<TargetId, TargetPrediction> | null; // estimates of the loaded patient (BR-10)
+  truths?: Record<TargetId, 0 | 1> | null; // dataset labels, when shown (BR-11)
 }
 
 export function VesselList({
@@ -24,6 +27,8 @@ export function VesselList({
   hoveredTarget = null,
   onSelectTarget,
   onHoverTarget,
+  originals,
+  truths,
 }: VesselListProps) {
   return (
     <ul aria-label={VESSELS_LABEL} className="space-y-2">
@@ -70,7 +75,7 @@ export function VesselList({
                   data-risk-bar={target.id}
                   className="block h-full rounded-full"
                   style={{
-                    width: formatPercent(prediction.probability),
+                    width: `${percentPoints(prediction.probability)}%`,
                     backgroundColor: riskColor(prediction.probability),
                   }}
                 />
@@ -79,6 +84,12 @@ export function VesselList({
                 <span>{status}</span>
                 <span>{levelLabels[prediction.risk_level]}</span>
               </span>
+              <EstimateNotes
+                target={target}
+                prediction={prediction}
+                original={originals?.[target.id]}
+                truth={truths?.[target.id]}
+              />
             </button>
           </li>
         );

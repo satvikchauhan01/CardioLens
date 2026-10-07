@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { jsonResponse, META, predictResponse } from "../test/fixtures";
-import { ApiError, getMeta, getSamples, predict, TIMEOUT_MS, toApiError } from "./client";
+import { ApiError, getMeta, getMetrics, getSamples, predict, TIMEOUT_MS, toApiError } from "./client";
 
 type FetchLike = (url: string, init: RequestInit) => Promise<Response>;
 
@@ -31,6 +31,17 @@ describe("API client", () => {
     await expect(getMeta()).resolves.toEqual(META);
     expect(fetchMock.mock.calls[0][0]).toBe("/api/meta");
     expect(fetchMock.mock.calls[0][1].credentials).toBe("omit");
+  });
+
+  it("reads each endpoint from its own path, without a body", async () => {
+    const fetchMock = stubFetch(async () => jsonResponse({}));
+
+    await getMeta();
+    await getSamples();
+    await getMetrics();
+
+    expect(fetchMock.mock.calls.map(([url]) => url)).toEqual(["/api/meta", "/api/samples", "/api/metrics"]);
+    expect(fetchMock.mock.calls.every(([, init]) => init.method === undefined && init.body === undefined)).toBe(true);
   });
 
   it("posts the features as JSON", async () => {

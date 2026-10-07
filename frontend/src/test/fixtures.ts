@@ -5,9 +5,13 @@ import type {
   FeatureSchema,
   FeatureValue,
   MetaResponse,
+  MetricSet,
+  MetricsResponse,
+  ModelType,
   PredictResponse,
   SamplePatient,
   TargetId,
+  TargetMetrics,
   TargetPrediction,
 } from "../api/types";
 
@@ -63,7 +67,7 @@ export const META: MetaResponse = {
     { id: "echo", label: "Echocardiography" },
   ],
   features: FEATURES,
-  quick_controls: ["typical_chest_pain", "age", "ef_tte"],
+  quick_controls: ["typical_chest_pain", "age", "sex", "ef_tte"],
   decision_threshold: 0.5,
   risk_levels: [
     { id: "low", label: "Low", min: 0, max: 0.35 },
@@ -157,6 +161,62 @@ export function predictResponse(
     ) as PredictResponse["explanations"],
   };
 }
+
+function metricSet(rocAuc: number): MetricSet {
+  const stat = (mean: number) => ({ mean, std: 0.031 });
+  return {
+    accuracy: stat(rocAuc - 0.06), precision: stat(rocAuc - 0.02), recall: stat(rocAuc - 0.03),
+    specificity: stat(rocAuc - 0.15), f1: stat(rocAuc - 0.02), roc_auc: stat(rocAuc),
+    average_precision: stat(rocAuc + 0.04), brier: stat(1 - rocAuc),
+  };
+}
+
+function targetMetrics(target: TargetId, selected: ModelType, rocAuc: number, positives: number): TargetMetrics {
+  return {
+    n_positive: positives,
+    n_negative: 297 - positives,
+    prevalence: Number((positives / 297).toFixed(4)),
+    selected_model: selected,
+    selection_reason: selected === "logistic_regression" ? "Within 0.01 of best; simplest model preferred" : "Highest mean ROC-AUC",
+    candidates: {
+      logistic_regression: metricSet(selected === "logistic_regression" ? rocAuc : rocAuc - 0.02),
+      random_forest: metricSet(selected === "random_forest" ? rocAuc : rocAuc - 0.01),
+      gradient_boosting: metricSet(rocAuc - 0.03),
+      baseline_prior: { ...metricSet(0.5), roc_auc: { mean: 0.5, std: 0 } },
+    },
+    global_importance: [
+      { feature: "typical_chest_pain", share: 0.151 },
+      { feature: "ef_tte", share: 0.086 },
+      { feature: "age", share: 0.069 },
+    ],
+    plots: {
+      roc: `/static/plots/${target}_roc.png`,
+      calibration: `/static/plots/${target}_calibration.png`,
+      confusion: `/static/plots/${target}_confusion.png`,
+    },
+  };
+}
+
+export const METRICS: MetricsResponse = {
+  model_version: META.model_version,
+  validation: {
+    scheme: "repeated_stratified_kfold",
+    n_splits: 5,
+    n_repeats: 5,
+    seed: 42,
+    n_rows: 297,
+    decision_threshold: 0.5,
+    preprocessing_inside_folds: true,
+    excluded_columns: ["LAD", "LCX", "RCA", "Cath"],
+    holdout_note: "6 sample patients were held out by a fixed rule (seed 42) before any training; they are not used for cross-validation or the final fit.",
+  },
+  targets: {
+    cad: targetMetrics("cad", "logistic_regression", 0.917, 212),
+    lad: targetMetrics("lad", "random_forest", 0.855, 174),
+    lcx: targetMetrics("lcx", "random_forest", 0.739, 116),
+    rca: targetMetrics("rca", "logistic_regression", 0.725, 113),
+  },
+};
 
 /** A JSON Response as fetch would return it. */
 export function jsonResponse(body: unknown, status = 200): Response {

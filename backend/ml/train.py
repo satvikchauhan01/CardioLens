@@ -72,12 +72,13 @@ def train(
     """Run the whole pipeline; returns the manifest."""
     started = time.perf_counter()
     dataset = load_dataset(data_path)
+    # BR-2: checked first, so nothing is computed from a label column and nothing is written.
+    assert_no_leakage(dataset.feature_ids)
     holdout_rows = select_holdout(dataset.labels)
     rows = training_rows(dataset, holdout_rows)
     schema = build_feature_schema(dataset, rows)
     reference_values = build_reference_values(dataset, rows)
     features = dataset.features.loc[rows]
-    assert_no_leakage(features.columns)
 
     data_sha256 = file_sha256(data_path)
     trained_at = datetime.now(timezone.utc).replace(microsecond=0)

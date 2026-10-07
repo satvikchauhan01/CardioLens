@@ -3,7 +3,8 @@
 import type { TargetInfo, TargetPrediction } from "../../api/types";
 import { CAD_CAPTION, STATUS_TEXT } from "../../config/copy";
 import { riskColor } from "../../config/risk";
-import { formatPercent } from "../../utils/format";
+import { formatPercent, percentPoints } from "../../utils/format";
+import { EstimateNotes } from "./EstimateNotes";
 
 interface CadSummaryCardProps {
   target: TargetInfo;
@@ -11,6 +12,8 @@ interface CadSummaryCardProps {
   levelLabel: string;
   selected: boolean;
   onSelect: () => void;
+  original?: TargetPrediction | null;
+  truth?: 0 | 1 | null;
 }
 
 export function CadSummaryCard({
@@ -19,6 +22,8 @@ export function CadSummaryCard({
   levelLabel,
   selected,
   onSelect,
+  original,
+  truth,
 }: CadSummaryCardProps) {
   const status = prediction.predicted
     ? STATUS_TEXT.overall.predicted
@@ -49,11 +54,12 @@ export function CadSummaryCard({
             data-risk-bar={target.id}
             className="block h-full rounded-full"
             style={{
-              width: formatPercent(prediction.probability),
+              width: `${percentPoints(prediction.probability)}%`,
               backgroundColor: riskColor(prediction.probability),
             }}
           />
         </span>
+        <EstimateNotes target={target} prediction={prediction} original={original} truth={truth} />
       </button>
       <p className="mt-1.5 text-xs text-ink-muted">{CAD_CAPTION}</p>
     </div>

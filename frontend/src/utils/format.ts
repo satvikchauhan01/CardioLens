@@ -35,9 +35,32 @@ export function formatMeasurement(feature: FeatureSchema, value: FeatureValue): 
   return feature.unit === "%" ? `${text}%` : `${text} ${feature.unit}`;
 }
 
-/** Probability as an integer percentage: 0.5810 -> "58%". */
+/** Probability rounded to whole percentage points, 0 to 100. */
+export function percentPoints(probability: number): number {
+  return Math.round(Math.min(1, Math.max(0, probability)) * 100);
+}
+
+/**
+ * Probability as an integer percentage: 0.5810 -> "58%". A model is never certain, so what would
+ * round to 100% or 0% is shown as ">99%" and "<1%" (BR-14).
+ */
 export function formatPercent(probability: number): string {
-  return `${Math.round(probability * 100)}%`;
+  const points = percentPoints(probability);
+  if (points >= 100) return ">99%";
+  if (points <= 0) return "<1%";
+  return `${points}%`;
+}
+
+/** Signed difference in whole percentage points between two shown estimates (BR-10). */
+export function deltaPoints(original: number, current: number): number {
+  return percentPoints(current) - percentPoints(original);
+}
+
+/** "58% → 44%, −14 pp": an estimate before and after a what-if change (BR-10). */
+export function formatDelta(original: number, current: number): string {
+  const points = deltaPoints(original, current);
+  const signed = points > 0 ? `+${points}` : points < 0 ? `−${Math.abs(points)}` : "0";
+  return `${formatPercent(original)} → ${formatPercent(current)}, ${signed} pp`;
 }
 
 /** Signed relative contribution as an integer percentage, "<1%" when it rounds to nothing. */
@@ -46,6 +69,11 @@ export function formatRelative(relative: number): string {
   if (size === 0) return "0%";
   if (size < 0.005) return "<1%";
   return `${relative > 0 ? "+" : "−"}${Math.round(size * 100)}%`;
+}
+
+/** A cross-validated metric as "mean ± std" with three decimals: "0.917 ± 0.033". */
+export function formatStat(stat: { mean: number; std: number }): string {
+  return `${stat.mean.toFixed(3)} ± ${stat.std.toFixed(3)}`;
 }
 
 /** 1 -> "1st", 22 -> "22nd", 81 -> "81st", 12 -> "12th". */

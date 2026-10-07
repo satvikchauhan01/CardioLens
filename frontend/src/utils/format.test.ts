@@ -1,12 +1,16 @@
 import { describe, expect, it } from "vitest";
 import { FEATURES } from "../test/fixtures";
 import {
+  deltaPoints,
   formatBound,
+  formatDelta,
   formatMeasurement,
   formatNumber,
   formatPercent,
   formatRelative,
+  formatStat,
   ordinal,
+  percentPoints,
 } from "./format";
 
 const feature = (id: string) => FEATURES.find((item) => item.id === id)!;
@@ -46,8 +50,32 @@ describe("formatting (BR-14)", () => {
     expect(formatPercent(0.581)).toBe("58%");
     expect(formatPercent(0.4949)).toBe("49%");
     expect(formatPercent(0.5)).toBe("50%");
-    expect(formatPercent(0)).toBe("0%");
-    expect(formatPercent(1)).toBe("100%");
+    expect(formatPercent(0.994)).toBe("99%");
+    expect(formatPercent(0.005)).toBe("1%");
+  });
+
+  it("never prints a bare 100% or 0%", () => {
+    expect(formatPercent(0.9975)).toBe(">99%");
+    expect(formatPercent(0.995)).toBe(">99%");
+    expect(formatPercent(1)).toBe(">99%");
+    expect(formatPercent(0.0049)).toBe("<1%");
+    expect(formatPercent(0)).toBe("<1%");
+  });
+
+  it("rounds to whole percentage points within 0 to 100", () => {
+    expect([0.581, 0.9975, 0, 1.4, -0.2].map(percentPoints)).toEqual([58, 100, 0, 100, 0]);
+  });
+
+  it("prints a what-if change as before → after with signed percentage points (BR-10)", () => {
+    expect(formatDelta(0.584, 0.436)).toBe("58% → 44%, −14 pp");
+    expect(formatDelta(0.3, 0.42)).toBe("30% → 42%, +12 pp");
+    expect(formatDelta(0.5, 0.5)).toBe("50% → 50%, 0 pp");
+    expect(formatDelta(0.9975, 0.97)).toBe(">99% → 97%, −3 pp");
+    expect(formatDelta(0.002, 0.03)).toBe("<1% → 3%, +3 pp");
+    // The points are the difference of the two numbers on screen, not of the hidden decimals.
+    expect(deltaPoints(0.574, 0.566)).toBe(0);
+    expect(deltaPoints(0.5749, 0.5651)).toBe(0);
+    expect(deltaPoints(0.584, 0.436)).toBe(-14);
   });
 
   it("prints relative contributions signed, and <1% when they round to nothing", () => {
@@ -58,6 +86,12 @@ describe("formatting (BR-14)", () => {
     expect(formatRelative(-0.0001)).toBe("<1%");
     expect(formatRelative(0)).toBe("0%");
     expect(formatRelative(1)).toBe("+100%");
+  });
+
+  it("prints a cross-validated metric as mean ± std with three decimals", () => {
+    expect(formatStat({ mean: 0.9166, std: 0.0334 })).toBe("0.917 ± 0.033");
+    expect(formatStat({ mean: 0.5, std: 0 })).toBe("0.500 ± 0.000");
+    expect(formatStat({ mean: 0.7249, std: 0.045 })).toBe("0.725 ± 0.045");
   });
 
   it("writes ordinals", () => {

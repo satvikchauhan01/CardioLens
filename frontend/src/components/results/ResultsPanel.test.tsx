@@ -198,6 +198,170 @@ describe("results panel (F4)", () => {
   });
 });
 
+describe("what-if deltas (BR-10)", () => {
+  const original = predictResponse();
+  const edited = { ...VALUES, age: 72 };
+  const delta = (target: string) => document.querySelector(`[data-delta="${target}"]`)?.textContent ?? null;
+  const modified = (result: PredictResponse): AnalysisState => ({
+    ...ready(original), values: edited, result, lastGoodResult: result, latestRequestId: 2,
+  });
+
+  it("shows no change while the inputs are those of the loaded patient", () => {
+    renderPanel(ready(original));
+
+    expect(document.querySelector("[data-delta]")).toBeNull();
+  });
+
+  it("shows original → current and the signed difference for every target once the inputs differ", () => {
+    renderPanel(modified(predictResponse(edited, { cad: 0.9051, lad: 0.436, lcx: 0.2207, rca: 0.9975 })));
+
+    expect(delta("cad")).toBe("81% → 91%, +10 pp");
+    expect(delta("lad")).toBe("58% → 44%, −14 pp");
+    expect(delta("lcx")).toBe("22% → 22%, 0 pp");
+    expect(delta("rca")).toBe("44% → >99%, +56 pp");
+    // The row itself shows the current estimate.
+    expect(row(/^LAD/).textContent).toBe(
+      "LAD · Left Anterior Descending44%Stenosis not predictedModerate58% → 44%, −14 pp",
+    );
+  });
+
+  it("waits for the new estimate before showing a change", () => {
+    renderPanel({ ...ready(original), status: "predicting", values: edited, result: null, latestRequestId: 2 });
+
+    expect(row(/^LAD/).textContent).toContain("58%");
+    expect(document.querySelector("[data-delta]")).toBeNull();
+  });
+
+  it("keeps the last change, dimmed, while a further edit is pending", () => {
+    const first = predictResponse(edited, { lad: 0.9 });
+    renderPanel({ ...modified(first), status: "predicting", values: { ...edited, age: 75 }, result: null, latestRequestId: 3 });
+
+    expect(delta("lad")).toBe("58% → 90%, +32 pp");
+    expect(document.querySelector('[aria-busy="true"]')?.className).toContain("opacity-60");
+  });
+
+  it("shows no change when the original values were typed back", () => {
+    const again = predictResponse();
+    renderPanel({ ...ready(original), result: again, lastGoodResult: again, latestRequestId: 3 });
+
+    expect(document.querySelector("[data-delta]")).toBeNull();
+  });
+});
+
+describe("ground-truth reveal (F8, BR-11)", () => {
+  type Labels = Record<TargetId, 0 | 1>;
+  const POSITIVE: Labels = SAMPLES[0].ground_truth;
+  const truth = (target: string) => document.querySelector(`[data-truth="${target}"]`)?.textContent ?? null;
+  const toggle = () =>
+    screen.getByRole("checkbox", { name: "Show dataset angiography result" }) as HTMLInputElement;
+  const note = () => document.getElementById(toggle().getAttribute("aria-describedby")!)?.textContent;
+
+  function renderReveal(state: AnalysisState, groundTruth: Labels | null, show: boolean) {
+    const onShowGroundTruth = vi.fn();
+    render(
+      <MetaContext.Provider value={META}>
+        <ResultsPanel
+          state={state}
+          selectedTarget="cad"
+          onSelectTarget={vi.fn()}
+          onRetry={vi.fn()}
+          groundTruth={groundTruth}
+          showGroundTruth={show}
+          onShowGroundTruth={onShowGroundTruth}
+        />
+      </MetaContext.Provider>,
+    );
+    return { onShowGroundTruth };
+  }
+
+  it("offers the toggle for an unmodified sample and reports the choice", () => {
+    const { onShowGroundTruth } = renderReveal(ready(predictResponse()), POSITIVE, false);
+
+    expect(toggle().disabled).toBe(false);
+    expect(toggle().checked).toBe(false);
+    expect(note()).toBe(
+      "This sample patient was held out from training and validation. The dataset label is what angiography recorded.",
+    );
+    expect(document.querySelector("[data-truth]")).toBeNull();
+
+    fireEvent.click(toggle());
+    expect(onShowGroundTruth).toHaveBeenCalledExactlyOnceWith(true);
+  });
+
+  it("shows the dataset label of every target", () => {
+    // The fixture predicts CAD and LAD; sample A's four labels are all positive.
+    renderReveal(ready(predictResponse()), POSITIVE, true);
+
+    expect(toggle().checked).toBe(true);
+    expect(truth("cad")).toBe("Dataset label: CAD ✓ (matches the model's prediction)");
+    expect(truth("lad")).toBe("Dataset label: Stenotic ✓ (matches the model's prediction)");
+    expect(truth("lcx")).toBe("Dataset label: Stenotic ✗ (differs from the model's prediction)");
+    expect(truth("rca")).toBe("Dataset label: Stenotic ✗ (differs from the model's prediction)");
+    expect(screen.getByText("The model's prediction matches the dataset label for 2 of 4 targets.")).toBeTruthy();
+  });
+
+  it("marks a match from the predicted status, for positive and negative labels alike (BR-3)", () => {
+    renderReveal(
+      ready(predictResponse(VALUES, { cad: 0.2, lad: 0.7, lcx: 0.5, rca: 0.4999 })),
+      { cad: 0, lad: 0, lcx: 1, rca: 1 },
+      true,
+    );
+
+    expect(truth("cad")).toBe("Dataset label: Normal ✓ (matches the model's prediction)");
+    expect(truth("lad")).toBe("Dataset label: Normal ✗ (differs from the model's prediction)");
+    expect(truth("lcx")).toBe("Dataset label: Stenotic ✓ (matches the model's prediction)");
+    expect(truth("rca")).toBe("Dataset label: Stenotic ✗ (differs from the model's prediction)");
+  });
+
+  it("counts the targets that match", () => {
+    renderReveal(ready(predictResponse(VALUES, { cad: 0.9, lad: 0.8, lcx: 0.7, rca: 0.6 })), POSITIVE, true);
+
+    expect(screen.getByText("The model's prediction matches the dataset label for 4 of 4 targets.")).toBeTruthy();
+  });
+
+  it("hides the labels and explains why once the inputs are modified", () => {
+    const edited = { ...VALUES, age: 72 };
+    const result = predictResponse(edited);
+    renderReveal(
+      { ...ready(predictResponse()), values: edited, result, lastGoodResult: result, latestRequestId: 2 },
+      POSITIVE,
+      true,
+    );
+
+    const reason =
+      "Hidden while inputs are modified: the dataset label belongs to the original patient. Use “Reset to original” to compare again.";
+    expect(document.querySelector("[data-truth]")).toBeNull();
+    expect(screen.queryByText(/matches the dataset label for/)).toBeNull();
+    expect(toggle().disabled).toBe(true);
+    expect(toggle().checked).toBe(false);
+    expect(note()).toBe(reason);
+    expect(toggle().closest("label")?.title).toBe(reason);
+  });
+
+  it("has nothing to reveal for a patient that is not a sample", () => {
+    renderReveal({ ...ready(predictResponse()), source: "typical", sampleId: null }, null, true);
+
+    expect(document.querySelector("[data-truth]")).toBeNull();
+    expect(toggle().disabled).toBe(true);
+    expect(note()).toBe("Only sample patients have a dataset label to compare with.");
+  });
+
+  it("keeps the labels back until the estimates on screen are the sample's own", () => {
+    // Another sample is loading: the dimmed result still belongs to the previous patient.
+    renderReveal({ ...ready(predictResponse()), status: "predicting", result: null, latestRequestId: 2 }, POSITIVE, true);
+
+    expect(document.querySelector("[data-truth]")).toBeNull();
+    expect(toggle().disabled).toBe(false);
+    expect(toggle().checked).toBe(true);
+  });
+
+  it("shows no toggle where the reveal is not wired", () => {
+    renderPanel(ready(predictResponse()));
+
+    expect(screen.queryByRole("checkbox")).toBeNull();
+  });
+});
+
 describe("explanation panel (F6)", () => {
   const labels = () =>
     within(screen.getByRole("region", { name: /Why this estimate/ }))

@@ -11,17 +11,18 @@ interface FeatureFieldProps {
   value: FormValue;
   error?: string;
   onEdit: (field: string, value: FormValue) => void;
+  idPrefix?: string; // an input may be shown twice (quick controls and the full form)
 }
 
 const INPUT_CLASS =
   "w-full rounded-md border bg-surface px-2 py-1.5 text-sm text-ink focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-brand";
 
-export const fieldId = (feature: FeatureSchema) => `field-${feature.id}`;
+export const fieldId = (feature: FeatureSchema, prefix = "field") => `${prefix}-${feature.id}`;
 
-function FieldError({ feature, error }: { feature: FeatureSchema; error?: string }) {
+function FieldError({ id, error }: { id: string; error?: string }) {
   if (!error) return null;
   return (
-    <p id={`${fieldId(feature)}-error`} className="mt-1 text-xs font-medium text-danger">
+    <p id={`${id}-error`} className="mt-1 text-xs font-medium text-danger">
       {error}
     </p>
   );
@@ -35,19 +36,19 @@ function fromDraft(draft: string): number | null {
   return draft.trim() === "" ? null : Number(draft);
 }
 
-function NumberField({ feature, value, error, onEdit }: FeatureFieldProps) {
+function NumberField({ feature, value, error, onEdit, idPrefix }: FeatureFieldProps) {
   // The text being typed is kept separately so that "12." or "0.50" is not rewritten mid-edit.
   const [draft, setDraft] = useState(() => toDraft(feature, value));
   const [seenValue, setSeenValue] = useState(value);
   if (value !== seenValue) {
-    // The value changed from outside (a patient was loaded): show it instead of the old text.
+    // The value changed from outside (a patient was loaded, a slider moved): show it.
     setSeenValue(value);
     if (fromDraft(draft) !== value) setDraft(toDraft(feature, value));
   }
 
   const step = feature.step ?? 1;
   const range = `${formatBound(feature.min ?? 0, step, "min")}–${formatBound(feature.max ?? 0, step, "max")}`;
-  const id = fieldId(feature);
+  const id = fieldId(feature, idPrefix);
 
   return (
     <div>
@@ -71,7 +72,7 @@ function NumberField({ feature, value, error, onEdit }: FeatureFieldProps) {
         className={`mt-1 ${INPUT_CLASS} ${error ? "border-danger" : "border-line"}`}
       />
       {error ? (
-        <FieldError feature={feature} error={error} />
+        <FieldError id={id} error={error} />
       ) : (
         <p id={`${id}-range`} className="mt-1 text-xs text-ink-muted">
           {range}
@@ -81,8 +82,8 @@ function NumberField({ feature, value, error, onEdit }: FeatureFieldProps) {
   );
 }
 
-function SwitchField({ feature, value, error, onEdit }: FeatureFieldProps) {
-  const id = fieldId(feature);
+function SwitchField({ feature, value, error, onEdit, idPrefix }: FeatureFieldProps) {
+  const id = fieldId(feature, idPrefix);
   return (
     <div>
       <label
@@ -109,13 +110,13 @@ function SwitchField({ feature, value, error, onEdit }: FeatureFieldProps) {
           />
         </span>
       </label>
-      <FieldError feature={feature} error={error} />
+      <FieldError id={id} error={error} />
     </div>
   );
 }
 
-function SelectField({ feature, value, error, onEdit }: FeatureFieldProps) {
-  const id = fieldId(feature);
+function SelectField({ feature, value, error, onEdit, idPrefix }: FeatureFieldProps) {
+  const id = fieldId(feature, idPrefix);
   return (
     <div>
       <label htmlFor={id} className="block text-xs font-medium text-ink">
@@ -136,7 +137,7 @@ function SelectField({ feature, value, error, onEdit }: FeatureFieldProps) {
           </option>
         ))}
       </select>
-      <FieldError feature={feature} error={error} />
+      <FieldError id={id} error={error} />
     </div>
   );
 }

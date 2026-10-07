@@ -156,6 +156,60 @@ describe("useAnalysis", () => {
     expect(analysis().state.error?.code).toBe("NETWORK_ERROR");
   });
 
+  it("resets to the original patient at once, without a request, and drops the pending edit", async () => {
+    const { predict, calls, analysis } = setup();
+    act(() => analysis().loadSample(A));
+    const original = predictResponse(A.features);
+    await settle(() => calls[0].resolve(original));
+    act(() => analysis().edit("age", 70));
+    act(() => vi.advanceTimersByTime(EDIT_DEBOUNCE_MS));
+    await settle(() => calls[1].resolve(predictResponse({ ...A.features, age: 70 }, { lad: 0.9 })));
+    act(() => analysis().edit("age", 75));
+
+    act(() => analysis().resetToOriginal());
+
+    expect(analysis().state.status).toBe("ready");
+    expect(analysis().state.values).toBe(A.features);
+    expect(analysis().state.result).toBe(original);
+    act(() => vi.advanceTimersByTime(EDIT_DEBOUNCE_MS));
+    expect(predict).toHaveBeenCalledTimes(2);
+
+    // Editing afterwards starts from the original values again.
+    act(() => analysis().edit("dm", false));
+    act(() => vi.advanceTimersByTime(EDIT_DEBOUNCE_MS));
+    expect(predict).toHaveBeenLastCalledWith({ ...A.features, dm: false });
+  });
+
+  it("resets by loading the patient again when its first prediction never arrived", async () => {
+    const { predict, calls, analysis } = setup();
+    act(() => analysis().loadSample(A));
+    await settle(() => calls[0].reject(new ApiError("NETWORK_ERROR", "The model service could not be reached.")));
+    act(() => analysis().edit("age", 70));
+
+    act(() => analysis().resetToOriginal());
+
+    expect(analysis().state.status).toBe("predicting");
+    expect(predict).toHaveBeenCalledTimes(2);
+    expect(predict).toHaveBeenLastCalledWith(A.features);
+    expect(analysis().state.values).toBe(A.features);
+  });
+
+  it("clears a field error on reset", async () => {
+    const { calls, analysis } = setup();
+    act(() => analysis().loadSample(A));
+    await settle(() => calls[0].resolve(predictResponse(A.features)));
+    act(() => analysis().edit("age", 200));
+    act(() => vi.advanceTimersByTime(EDIT_DEBOUNCE_MS));
+    expect(analysis().state.status).toBe("input_invalid");
+
+    act(() => analysis().resetToOriginal());
+    expect(analysis().state).toMatchObject({ status: "ready", fieldErrors: {} });
+
+    // The next edit is debounced again, not re-checked at once.
+    act(() => analysis().edit("age", 61));
+    expect(calls).toHaveLength(1);
+  });
+
   it("ignores edits before a patient is loaded and stops its timer on unmount", () => {
     const { predict, calls, analysis, hook } = setup();
 

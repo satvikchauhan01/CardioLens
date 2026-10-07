@@ -28,6 +28,7 @@ export type AnalysisAction =
       values: Record<string, FeatureValue>;
     }
   | { type: "EDIT"; requestId: number; field: string; value: FormValue }
+  | { type: "RESET"; requestId: number }
   | { type: "INVALID"; requestId: number; errors: Record<string, string> }
   | { type: "REQUEST"; requestId: number }
   | { type: "RESPONSE_OK"; requestId: number; result: PredictResponse }
@@ -47,6 +48,13 @@ export const initialAnalysisState: AnalysisState = {
   loadRequestId: null,
   error: null,
 };
+
+/** Ids of the inputs whose current value differs from the loaded patient's (BR-10). */
+export function modifiedFields(state: Pick<AnalysisState, "values" | "loadedValues">): string[] {
+  const { values, loadedValues } = state;
+  if (!values || !loadedValues) return [];
+  return Object.keys(loadedValues).filter((field) => values[field] !== loadedValues[field]);
+}
 
 export function analysisReducer(state: AnalysisState, action: AnalysisAction): AnalysisState {
   const isLatest = action.requestId === state.latestRequestId;
@@ -77,6 +85,20 @@ export function analysisReducer(state: AnalysisState, action: AnalysisAction): A
         status: "predicting",
         values: { ...state.values, [action.field]: action.value },
         result: null,
+        latestRequestId: action.requestId,
+        error: null,
+      };
+
+    case "RESET":
+      // "Reset to original" (BR-10): back to the loaded values and their known result, no request.
+      if (!state.loadedValues || !state.originalResult) return state;
+      return {
+        ...state,
+        status: "ready",
+        values: state.loadedValues,
+        fieldErrors: {},
+        result: state.originalResult,
+        lastGoodResult: state.originalResult,
         latestRequestId: action.requestId,
         error: null,
       };
