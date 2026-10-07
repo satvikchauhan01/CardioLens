@@ -48,7 +48,16 @@ npm install
 
 ## Train the models
 
-_To be completed (T3.4)._
+The trained models and their metrics are already in `backend/artifacts/`, so this step is only needed to reproduce them.
+
+```powershell
+cd backend
+.\.venv\Scripts\Activate.ps1
+python -m ml.inspect_data
+python -m ml.train
+```
+
+`ml.inspect_data` writes a factual report about the dataset file (`backend/artifacts/data_report.md`). `ml.train` runs the whole pipeline in about a minute on a laptop CPU: it holds out six sample patients, cross-validates three candidate models per target, refits the selected one and writes the models, metrics, plots and schema. Seeds are fixed, so a rerun reproduces the same metrics and predictions.
 
 ## Run the backend
 
@@ -58,7 +67,7 @@ cd backend
 uvicorn app.main:app --reload --port 8000
 ```
 
-Until the models are trained, `http://localhost:8000/api/health` answers 503 with the reason.
+The prediction endpoints are not built yet, so `http://localhost:8000/api/health` currently answers 503 with the reason.
 
 ## Run the frontend
 
@@ -103,7 +112,22 @@ CardioLens/
 
 ## Model summary
 
-_To be completed from `backend/artifacts/metrics.json` after training (T3.4). No results are reported before the models are trained._
+Four separate classifiers, one per target, trained on 297 patients (six more are held out as demo patients and never used for training or validation). Each model sees the same 54 clinical inputs. The four angiography columns (`LAD`, `LCX`, `RCA`, `Cath`) are never inputs to any model; the code refuses to train if one appears.
+
+For each target, logistic regression, random forest and gradient boosting are compared with repeated stratified 5-fold cross-validation (5 repeats, 25 folds), with preprocessing refitted inside every fold. The model with the highest mean ROC-AUC is selected, except that logistic regression is preferred when it is within 0.01 of the best. No hyperparameters are tuned.
+
+Cross-validated results of the selected models (mean ± standard deviation over 25 folds, threshold 0.5), from `backend/artifacts/metrics.json`, model version `20261007T1423Z-7393432`:
+
+| Target | Selected model | Positive / negative | ROC-AUC | Accuracy | Precision | Recall | Specificity | F1 | Brier |
+|---|---|---|---|---|---|---|---|---|---|
+| CAD | Logistic regression | 212 / 85 | 0.917 ± 0.033 | 0.860 ± 0.031 | 0.908 ± 0.034 | 0.896 ± 0.044 | 0.769 ± 0.096 | 0.901 ± 0.023 | 0.104 ± 0.019 |
+| LAD | Random forest | 174 / 123 | 0.855 ± 0.053 | 0.789 ± 0.064 | 0.784 ± 0.064 | 0.892 ± 0.051 | 0.643 ± 0.130 | 0.833 ± 0.048 | 0.161 ± 0.019 |
+| LCX | Random forest | 116 / 181 | 0.739 ± 0.056 | 0.675 ± 0.046 | 0.653 ± 0.116 | 0.396 ± 0.088 | 0.854 ± 0.075 | 0.485 ± 0.076 | 0.204 ± 0.011 |
+| RCA | Logistic regression | 113 / 184 | 0.725 ± 0.045 | 0.672 ± 0.049 | 0.581 ± 0.076 | 0.526 ± 0.093 | 0.762 ± 0.071 | 0.547 ± 0.070 | 0.215 ± 0.026 |
+
+A baseline that always predicts the class prior scores ROC-AUC 0.500 on every target. The vessel-level models, LCX and RCA in particular, are much weaker than the overall CAD model: at the 0.5 threshold their recall is only 0.40 and 0.53. `metrics.json` also holds the other candidates, the baseline and the global feature importances, and `backend/artifacts/plots/` holds the ROC, calibration and confusion plots.
+
+Each prediction is explained with SHAP values (exact explainers for linear and tree models), summed back to the original clinical features.
 
 ## Attributions
 

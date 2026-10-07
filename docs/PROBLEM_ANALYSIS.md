@@ -5,7 +5,7 @@
 **Builder:** Satvik Chauhan (solo) · **Development ends:** 2026-10-14 EOD (confirm exact time and time zone on Devpost)
 
 > The official Track A problem statement and the Submission Guidelines override everything in this folder. If anything here conflicts with them, stop and ask.
-> Facts not yet confirmed against the actual data file are marked **(verify in T2.1)**.
+> Dataset facts were checked against the actual file at T2.1 (2026-10-07); DATA_MODEL §9 lists what changed.
 
 ---
 
@@ -49,7 +49,7 @@ Sources: Track A problem statement (**PS**) and Submission Guidelines (**SG**). 
 |---|---|---|---|---|
 | PM-1 | Train classification model(s) for overall CAD status | PS 1.a | `cad` model (F3) | T3.1–T3.4 |
 | PM-2 | Predict stenosis status for LAD, LCX, RCA | PS 1.b | `lad`, `lcx`, `rca` models (F3) | T3.1–T3.4 |
-| PM-3 | Use demographic, examination, ECG, laboratory and echo features | PS 1.c | All non-label dataset features feed all four models (DATA_MODEL §2) | T2.2 |
+| PM-3 | Use demographic, examination, ECG, laboratory and echo features | PS 1.c | Every non-label dataset feature that varies feeds all four models: 54 of 55, the constant `Exertional CP` is dropped (DATA_MODEL §2) | T2.2 |
 | PM-4 | Exclude LAD, LCX, RCA and Cath from inputs for every target | PS 1.d | Leakage guard in code + automated test (BR-2) | T2.2, T9.1 |
 | PM-5 | Evaluate with accuracy, precision, recall, F1, ROC-AUC | PS 1.e | Repeated stratified CV, mean ± std; plus specificity, average precision, Brier score (F9) | T3.2 |
 | VIS-1 | Interactive 3D torso/heart (Three.js / WebGL / R3F / VTK.js) | PS 2.a | React Three Fiber heart viewer (F5) | T6.1 |

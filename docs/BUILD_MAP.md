@@ -310,8 +310,15 @@ Cut in this order if behind schedule:
 | Task | Status | Commit | Notes |
 |---|---|---|---|
 | T0.1 | Done | — | Spec drafted and approved 2026-10-07 |
-| T0.2 | Done | — | All PROPOSED decisions approved 2026-10-07; D-025 changed to Python 3.13. Still open: DECISIONS §3 items 2, 4, 5, 6 |
-| T1.1 | Partly done | — | Verified 2026-10-07: Python 3.13.14, Node 22.16.0, npm 10.9.2, Git 2.51.2. Project flattened into `D:\CardioLens` and the local git repository removed at Satvik's request (D-034); GitHub repo exists and is empty. Waiting for Satvik: when to run `git init` at the root; dataset file in `backend/data/raw/` (blocks Phase 2) |
-| T1.2 | Done, not committed | — | Scaffold built 2026-10-07; structure check passed |
-| T1.3 | Done, not committed | — | 2026-10-07: `pytest` 13 passed. Checked on a running server: `/api/health` → 503 contract body, unknown route → 404 envelope, 16 KB + 1 byte → 413. Known warning: Starlette deprecates `httpx` for its TestClient in favour of `httpx2` (tests still pass; swapping needs Satvik's approval) |
-| T1.4 | Done, not committed | — | 2026-10-07: `npm run test` 4 passed, type-check and `npm run build` pass; shell checked in the browser on both tabs, no console errors. The header's Reset demo button is added in T7.1, when there is something to reset |
+| T0.2 | Done | — | All PROPOSED decisions approved 2026-10-07; D-025 changed to Python 3.13. Still open: DECISIONS §3 items 2, 4, 5, 7, 8 |
+| T1.1 | Done | — | Verified 2026-10-07: Python 3.13.14, Node 22.16.0, npm 10.9.2, Git 2.51.2. Project root is `D:\CardioLens` with the git repository at the root (D-034). Dataset downloaded from the UCI page with Satvik's approval and placed in `backend/data/raw/` |
+| T1.2 | Done | `9ce1cb8` | Scaffold built 2026-10-07; structure check passed |
+| T1.3 | Done | `9ce1cb8` | 2026-10-07: `pytest` 13 passed. Checked on a running server: `/api/health` → 503 contract body, unknown route → 404 envelope, 16 KB + 1 byte → 413. Known warning: Starlette deprecates `httpx` for its TestClient in favour of `httpx2` (tests still pass; swapping needs Satvik's approval) |
+| T1.4 | Done | `9ce1cb8` | 2026-10-07: `npm run test` 4 passed, type-check and `npm run build` pass; shell checked in the browser on both tabs, no console errors. The header's Reset demo button is added in T7.1, when there is something to reset |
+| T2.1 | Done, not committed · ⛳ review | — | 2026-10-07: `python -m ml.inspect_data` writes `backend/artifacts/data_report.md` from the real file (303 × 59, no missing values, no duplicates). DATA_MODEL updated; its §9 lists the eight changes for Satvik's review |
+| T2.2 | Done, not committed | — | 55 input columns with metadata, 54 used (`Exertional CP` is constant and dropped); every raw value mapped; leakage guard in the loader, the preprocessor and the trainer |
+| T2.3 | Done, not committed | — | Held-out rows 33, 235, 172, 88, 185, 286 (samples A to F); 297 training rows; schema, samples and reference values written by `python -m ml.train` |
+| T3.1 | Done, not committed | — | ColumnTransformer gives 57 columns from 54 features; all three candidates and the baseline fit and predict |
+| T3.2 | Done, not committed · ⛳ review | — | 25-fold results, selected model per target (ROC-AUC mean ± std): CAD logistic regression 0.917 ± 0.033 · LAD random forest 0.855 ± 0.053 · LCX random forest 0.739 ± 0.056 · RCA logistic regression 0.725 ± 0.045. Baseline 0.500 for all. Threshold, class weighting and calibration left as approved (DECISIONS §3 item 7) |
+| T3.3 | Done, not committed | — | Additivity holds for all three model types (error below 1e-8); 4 predictions + 4 explanations for one patient take about 80 ms (p95 about 105 ms) on this laptop |
+| T3.4 | Done, not committed | — | `python -m ml.train` runs in about 55 s. A second run reproduced every metric, every predicted probability for all 303 rows and every plot byte for byte. `pytest`: 110 passed |

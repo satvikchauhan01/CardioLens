@@ -1,0 +1,21 @@
+{
+  "model_version": "20261007T1423Z-7393432",
+  "trained_at": "2026-10-07T14:23:36Z",
+  "data_file": "extention of Z-Alizadeh sani dataset.xlsx",
+  "data_sha256": "739343245c2ba578b541370217531750d8e936022f928b83e0d91756caa3ff0b",
+  "seed": 42,
+  "python": "3.13.14",
+  "libraries": {
+    "scikit-learn": "1.9.1",
+    "shap": "0.52.0",
+    "pandas": "3.0.6",
+    "numpy": "2.5.3",
+    "joblib": "1.6.0"
+  },
+  "targets": [
+    "cad",
+    "lad",
+    "lcx",
+    "rca"
+  ]
+}
