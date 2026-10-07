@@ -75,6 +75,20 @@ export const MODEL_TYPE_LABELS: Record<ModelType, string> = {
   gradient_boosting: "Gradient boosting",
 };
 
-// 3D viewer (F5), built in Phase 6
+// 3D viewer (F5, F10, F11)
 export const VIEWER_HEADING = "3D heart";
-export const VIEWER_NOT_BUILT = "The interactive heart viewer has not been built yet.";
+export const VIEWER_LOADING = "Loading the 3D viewer…";
+export const VIEWER_HINT = "Drag to rotate · scroll to zoom · click an artery for its explanation";
+export const LABELS_TOGGLE = "Labels";
+export const NO_ESTIMATE = "no estimate";
+export const LEGEND_TITLE = "Estimated probability of ≥50% narrowing";
+export const LEGEND_NO_ESTIMATE = "No estimate";
+// PRODUCT_SPEC §9.3, exact.
+export const LEGEND_NOTE =
+  "Color shows each artery's model-estimated probability of ≥50% narrowing. It does not show where along the artery a narrowing might be.";
+export const STAND_IN_NOTE =
+  "The heart is a stylised shape and the artery courses are schematic, not patient anatomy.";
+export const MODEL_UNAVAILABLE_NOTICE = "Detailed heart model unavailable";
+export const SCHEMATIC_NOTICE =
+  "3D graphics are not available in this browser, so the arteries are shown as a flat front view. Dashed parts run behind the heart.";
+export const RESET_DEMO = "Reset demo";

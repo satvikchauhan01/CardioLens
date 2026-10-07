@@ -213,6 +213,7 @@ interface VesselConfig {
   objectName: `artery-${"lad" | "lcx" | "rca"}`;
   preferredView: "front" | "back" | "left" | "right";   // preset used when selected from the list
 }
+const HEART_MODEL_URL: string | null;   // null while the stand-in heart is used (D-051)
 
 // src/scene/arteryPaths.ts — control points in the heart model's coordinate space
 type Vec3 = [number, number, number];
@@ -221,6 +222,7 @@ interface ArteryPath {
   points: Vec3[];
   radius: number;
   interactive: boolean;
+  labelAnchors: { point: Vec3; normal: Vec3 }[];   // where the label may sit; the one facing the camera is used
 }
 
 // src/state/analysisReducer.ts — PRODUCT_SPEC §6.2

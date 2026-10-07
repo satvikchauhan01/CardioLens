@@ -15,6 +15,10 @@ export default defineConfig({
       "/static": BACKEND_URL,
     },
   },
+  build: {
+    // The 3D viewer (three.js) is one lazy chunk of about 0.9 MB, loaded after the page is usable.
+    chunkSizeWarningLimit: 1000,
+  },
   test: {
     environment: "jsdom",
     setupFiles: ["./src/test/setup.ts"],

@@ -76,7 +76,7 @@ cd frontend
 npm run dev
 ```
 
-Open http://localhost:5173 with the backend running. The dev server forwards `/api` and `/static` to the backend on port 8000. The first sample patient loads by itself; pick another sample or edit any input and the estimates and explanations update. The 3D heart and the Model & method tab are not built yet.
+Open http://localhost:5173 with the backend running. The dev server forwards `/api` and `/static` to the backend on port 8000. The first sample patient loads by itself; pick another sample or edit any input and the estimates, the artery colours and the explanations update. Drag the heart to rotate it, scroll to zoom, and click an artery (or its row in the list) to see that vessel's explanation. The Model & method tab is not built yet.
 
 ## Tests
 
@@ -134,7 +134,7 @@ Each prediction is explained with SHAP values (exact explainers for linear and t
 **Dataset.** Alizadehsani, R., Roshanzamir, M., & Sani, Z. (2013). extention of Z-Alizadeh sani dataset [Dataset]. UCI Machine Learning Repository. https://doi.org/10.24432/C5461K — licensed under CC BY 4.0.
 Dataset page: https://archive.ics.uci.edu/dataset/411/extention+of+z+alizadeh+sani+dataset
 
-**3D heart model.** _To be added with author, source URL and license (T6.1)._
+**3D heart model.** No third-party model is used yet: the heart is a stylised stand-in shape generated in code (`frontend/src/scene/heartShape.ts`), and the artery courses are schematic. An open-licensed mesh will be credited here, with author, source URL and license, when it replaces the stand-in.
 
 ## Limitations
 

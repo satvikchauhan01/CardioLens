@@ -114,7 +114,7 @@ Training is an offline CLI step, not a runtime job.
 2. `GET /api/meta` → targets, feature schema, quick controls, thresholds, risk levels.
 3. `GET /api/samples` → 6 held-out sample patients.
 4. Frontend loads Sample A into state → DF-2 step 3.
-5. 3D chunk finishes → `useGLTF('/models/heart.glb')` loads (Suspense loader → model, or error boundary → proxy heart).
+5. 3D chunk finishes → if `HEART_MODEL_URL` is set, `useGLTF` loads it (stand-in heart while loading → model, or error boundary → stand-in heart with a notice). While it is `null` (D-051) the stand-in heart is drawn directly and nothing is fetched.
 
 **DF-2 Predict (load or edit)**
 1. User edits a field (or loads a sample/typical values/reset).
@@ -170,15 +170,18 @@ CardioLens/
     ├── index.html
     ├── package.json
     ├── vite.config.ts                      # /api and /static proxy → http://localhost:8000
-    ├── public/models/heart.glb             # optimized heart asset (provided by Satvik)
+    ├── public/models/heart.glb             # optimized heart asset (provided by Satvik; not there yet, D-051)
     └── src/
         ├── main.tsx, App.tsx
         ├── api/        client.ts, types.ts
         ├── config/     vessels.ts, risk.ts, copy.ts
-        ├── state/      analysisReducer.ts, useAnalysis.ts
+        ├── state/      analysisReducer.ts, useAnalysis.ts, useBoot.ts, validation.ts, MetaContext.ts
+        ├── utils/      format.ts, environment.ts
         ├── components/ layout/, patient/, results/, evaluation/, common/
-        └── scene/      HeartViewer.tsx, HeartModel.tsx, ProxyHeart.tsx, Artery.tsx,
-                        arteryPaths.ts, ViewPresets.tsx, Legend.tsx, VesselSchematic2D.tsx
+        └── scene/      ViewerPanel.tsx (DOM container) · HeartViewer.tsx (lazy WebGL scene),
+                        HeartModel.tsx, ProxyHeart.tsx, ModelErrorBoundary.tsx, Artery.tsx,
+                        heartShape.ts (stand-in heart as math), arteryPaths.ts,
+                        ViewPresets.tsx, Legend.tsx, VesselSchematic2D.tsx
 ```
 
 ## 5. Frontend state

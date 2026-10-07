@@ -2,6 +2,7 @@
 
 import type { TargetInfo, TargetPrediction } from "../../api/types";
 import { CAD_CAPTION, STATUS_TEXT } from "../../config/copy";
+import { riskColor } from "../../config/risk";
 import { formatPercent } from "../../utils/format";
 
 interface CadSummaryCardProps {
@@ -42,6 +43,16 @@ export function CadSummaryCard({
             <span className="block text-sm font-medium text-ink">{status}</span>
             <span className="block text-xs text-ink-muted">{levelLabel}</span>
           </span>
+        </span>
+        <span aria-hidden="true" className="mt-2 block h-1.5 overflow-hidden rounded-full bg-line">
+          <span
+            data-risk-bar={target.id}
+            className="block h-full rounded-full"
+            style={{
+              width: formatPercent(prediction.probability),
+              backgroundColor: riskColor(prediction.probability),
+            }}
+          />
         </span>
       </button>
       <p className="mt-1.5 text-xs text-ink-muted">{CAD_CAPTION}</p>

@@ -322,11 +322,39 @@ Cut in this order if behind schedule:
 | T3.2 | Done · ⛳ review | `ba4c16b` | 25-fold results, selected model per target (ROC-AUC mean ± std): CAD logistic regression 0.917 ± 0.033 · LAD random forest 0.855 ± 0.053 · LCX random forest 0.739 ± 0.056 · RCA logistic regression 0.725 ± 0.045. Baseline 0.500 for all. Threshold, class weighting and calibration left as approved (DECISIONS §3 item 7) |
 | T3.3 | Done | `ba4c16b` | Additivity holds for all three model types (error below 1e-8); 4 predictions + 4 explanations for one patient take about 80 ms (p95 about 105 ms) on this laptop |
 | T3.4 | Done | `ba4c16b` | `python -m ml.train` runs in about 55 s. A second run reproduced every metric, every predicted probability for all 303 rows and every plot byte for byte. `pytest`: 110 passed |
-| T4.1 | Done, not committed | — | 2026-10-07: artifacts load once at startup; `/api/health` is 200 with them, 503 with the reason when they are missing, incomplete or trained with another scikit-learn version; `/api/meta` matches the contract |
-| T4.2 | Done, not committed | — | `/api/samples`, `/api/metrics` and the twelve plots are served; a missing or oddly named plot gives the 404 envelope |
-| T4.3 | Done, not committed | — | `POST /api/predict`: BR-13 validation with every problem reported together, four probabilities, four explanations, agreement note. Details recorded in D-047 |
-| T4.4 | Done, not committed | — | `pytest`: 183 passed (73 of them in `test_api.py`). Predict over 50 calls: median about 78 ms, p95 about 95 ms on this laptop (target: p95 < 300 ms) |
-| T5.1 | Done, not committed | — | API client with a 10 s timeout and one error type; boot skeleton, boot error with start commands and Retry, "Model service not ready" for a 503 |
-| T5.2 | Done, not committed | — | Sample picker, typical values, schema-driven form (54 inputs in 5 groups), client validation with the same messages as the API, reducer and debounce hook. Quick controls and Reset to original come in T8.1 |
-| T5.3 | Done, not committed | — | CAD card, vessel list, agreement note, all analysis states. Status and level come from the API response, so their boundary tests are in the backend (`test_risk_level_boundaries`); risk colours are added in T6.3 |
-| T5.4 | Done, not committed | — | Per-target explanation: summary, top 8 of 54 contributions with value, unit, percentile and signed share, "Show all". `npm run test`: 89 passed; type-check and build pass. Checked in the browser against the real API: load, edit, invalid input, vessel selection, backend stopped and restarted, three layout widths |
+| T4.1 | Done | `a182aad` | 2026-10-07: artifacts load once at startup; `/api/health` is 200 with them, 503 with the reason when they are missing, incomplete or trained with another scikit-learn version; `/api/meta` matches the contract |
+| T4.2 | Done | `a182aad` | `/api/samples`, `/api/metrics` and the twelve plots are served; a missing or oddly named plot gives the 404 envelope |
+| T4.3 | Done | `a182aad` | `POST /api/predict`: BR-13 validation with every problem reported together, four probabilities, four explanations, agreement note. Details recorded in D-047 |
+| T4.4 | Done | `a182aad` | `pytest`: 183 passed (73 of them in `test_api.py`). Predict over 50 calls: median about 78 ms, p95 about 95 ms on this laptop (target: p95 < 300 ms) |
+| T5.1 | Done | `a182aad` | API client with a 10 s timeout and one error type; boot skeleton, boot error with start commands and Retry, "Model service not ready" for a 503 |
+| T5.2 | Done | `a182aad` | Sample picker, typical values, schema-driven form (54 inputs in 5 groups), client validation with the same messages as the API, reducer and debounce hook. Quick controls and Reset to original come in T8.1 |
+| T5.3 | Done | `a182aad` | CAD card, vessel list, agreement note, all analysis states. Status and level come from the API response, so their boundary tests are in the backend (`test_risk_level_boundaries`); risk colours are added in T6.3 |
+| T5.4 | Done | `a182aad` | Per-target explanation: summary, top 8 of 54 contributions with value, unit, percentile and signed share, "Show all". `npm run test`: 89 passed; type-check and build pass. Checked in the browser against the real API: load, edit, invalid input, vessel selection, backend stopped and restarted, three layout widths |
+| T6.1 | Done with a stand-in · ⛳ asset pending | — | 2026-10-07: Satvik chose to start on a stand-in heart drawn in code (D-051). Lazy viewer chunk, on-demand frames, pixel ratio capped at 1.5, three lights, orbit with zoom limits and no pan. The GLB loader and its error fallback exist and were checked with a missing file ("Detailed heart model unavailable" + stand-in). Still to do when a mesh arrives: optimise it, set `HEART_MODEL_URL`, add the credit |
+| T6.2 | Done on the stand-in · ⛳ review | — | Tube arteries for LAD, LCX, RCA and a neutral left main, drawn on the stand-in's surface. Checked from the front, back, left and right views. No point picker was built: the paths are defined on the stand-in's own surface; a picker is only needed to re-author them on a real mesh |
+| T6.3 | Done, not committed | — | One colour scale (teal → amber → crimson, darker with risk) for arteries, legend, result bars and the 2D fallback; 0.4 s transition, instant with reduced motion; hover tooltip, click to select, list ↔ viewer highlight. Colour check done with the palette validator instead of DevTools emulation (D-052) |
+| T6.4 | Done, not committed | — | Front / Back / Left / Right / Reset view, labels toggle (labels follow the visible part of each artery), 2D schematic without WebGL, text alternative on the canvas |
+| T7.1 | Done, not committed | — | UF-1 to UF-4 work end to end with the 3D viewer; Reset demo in the header. `npm run test`: 134 passed, including the mocked-API integration tests; type-check and build pass; console clean on a fresh load. `pytest`: 183 passed |
+| T7.2 | Done | — | See §5 below: no failing row; two rows are open only because of the stand-in heart and the performance measurement that T10.1 does |
+
+## 5. Requirements trace check (T7.2, 2026-10-07)
+
+Rows of PROBLEM_ANALYSIS §3 in the PM, VIS, DASH, SAFE and TC groups.
+
+| ID | Requirement | Result | Evidence |
+|---|---|---|---|
+| PM-1 | Classifier for overall CAD | Pass | `cad` model, `backend/artifacts/models/cad.joblib` |
+| PM-2 | Stenosis status for LAD, LCX, RCA | Pass | Three vessel models, same pipeline |
+| PM-3 | Demographic, examination, ECG, laboratory and echo features | Pass | 54 of the 55 inputs (one constant column dropped), all five groups |
+| PM-4 | LAD, LCX, RCA, Cath never used as inputs | Pass | Guard in loader, preprocessor, trainer and API registry; `test_leakage_guard_*` |
+| PM-5 | Accuracy, precision, recall, F1, ROC-AUC | Pass | `metrics.json` (25 folds, mean ± std). Shown in the app in T8.3 |
+| VIS-1 | Interactive 3D heart | Pass on the stand-in | React Three Fiber viewer. A real open-licensed mesh is still to be provided (T6.1, ASSET-1) |
+| VIS-2 | Arteries coloured by predicted probability | Pass | `config/risk.ts`; colours follow every new prediction |
+| VIS-3 | Rotate, zoom, select | Pass | Orbit and zoom, hover tooltip, click to select, view presets |
+| DASH-1 | CAD status and vessel probabilities beside the canvas | Pass | Results panel |
+| DASH-2 | Interpretable breakdown (SHAP) | Pass | Per-target explanation panel |
+| DASH-3 | Measurements with their relative contribution | Pass | Value, unit, percentile and signed share per input |
+| SAFE-1 | Visible disclaimer | Pass | Banner on every tab, CAD caption, legend note |
+| TC-1 | Responsive 3D without a dedicated GPU | Open until T10.1 | Built for it (on-demand frames, capped pixel ratio, about 17 draw calls, no shadows); frame rate not yet measured |
+| TC-2 | New features, models or structures without redesign | Pass | Form from the schema; targets from `TARGETS`; vessels from the registry and paths |
+| TC-3 | Outputs match the displayed arteries | Pass | One id end to end; `arteryPaths.test.ts` and the integration tests |

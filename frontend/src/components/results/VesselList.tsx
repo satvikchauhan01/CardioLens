@@ -1,7 +1,9 @@
 // F4: one row per coronary artery. Rows are buttons, so every 3D selection also works by keyboard.
+// Hovering or focusing a row highlights the same artery in the viewer, and the other way round.
 
 import type { TargetId, TargetInfo, TargetPrediction } from "../../api/types";
 import { STATUS_TEXT, VESSELS_LABEL } from "../../config/copy";
+import { riskColor } from "../../config/risk";
 import { formatPercent } from "../../utils/format";
 
 interface VesselListProps {
@@ -9,7 +11,9 @@ interface VesselListProps {
   predictions: Record<TargetId, TargetPrediction>;
   levelLabels: Record<string, string>;
   selectedTarget: TargetId;
+  hoveredTarget?: TargetId | null;
   onSelectTarget: (target: TargetId) => void;
+  onHoverTarget?: (target: TargetId | null) => void;
 }
 
 export function VesselList({
@@ -17,13 +21,16 @@ export function VesselList({
   predictions,
   levelLabels,
   selectedTarget,
+  hoveredTarget = null,
   onSelectTarget,
+  onHoverTarget,
 }: VesselListProps) {
   return (
     <ul aria-label={VESSELS_LABEL} className="space-y-2">
       {targets.map((target) => {
         const prediction = predictions[target.id];
         const selected = target.id === selectedTarget;
+        const hovered = target.id === hoveredTarget;
         const status = prediction.predicted
           ? STATUS_TEXT.vessel.predicted
           : STATUS_TEXT.vessel.notPredicted;
@@ -34,8 +41,16 @@ export function VesselList({
               type="button"
               aria-pressed={selected}
               onClick={() => onSelectTarget(target.id)}
+              onMouseEnter={() => onHoverTarget?.(target.id)}
+              onMouseLeave={() => onHoverTarget?.(null)}
+              onFocus={() => onHoverTarget?.(target.id)}
+              onBlur={() => onHoverTarget?.(null)}
               className={`w-full cursor-pointer rounded-lg border px-3 py-2 text-left focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand ${
-                selected ? "border-brand bg-brand-soft" : "border-line bg-surface hover:border-brand"
+                selected
+                  ? "border-brand bg-brand-soft"
+                  : hovered
+                    ? "border-brand bg-surface"
+                    : "border-line bg-surface hover:border-brand"
               }`}
             >
               <span className="flex items-baseline justify-between gap-3">
@@ -52,8 +67,12 @@ export function VesselList({
                 className="mt-1.5 block h-1.5 overflow-hidden rounded-full bg-line"
               >
                 <span
-                  className="block h-full rounded-full bg-ink-muted"
-                  style={{ width: formatPercent(prediction.probability) }}
+                  data-risk-bar={target.id}
+                  className="block h-full rounded-full"
+                  style={{
+                    width: formatPercent(prediction.probability),
+                    backgroundColor: riskColor(prediction.probability),
+                  }}
                 />
               </span>
               <span className="mt-1.5 flex justify-between gap-3 text-xs text-ink-muted">

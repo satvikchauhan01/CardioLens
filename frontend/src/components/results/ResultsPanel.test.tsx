@@ -2,6 +2,7 @@ import { fireEvent, render, screen, within } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 import { ApiError } from "../../api/client";
 import type { PredictResponse, TargetId } from "../../api/types";
+import { riskColor } from "../../config/risk";
 import { initialAnalysisState, type AnalysisState } from "../../state/analysisReducer";
 import { MetaContext } from "../../state/MetaContext";
 import { META, predictResponse, SAMPLES } from "../../test/fixtures";
@@ -101,6 +102,44 @@ describe("results panel (F4)", () => {
 
     fireEvent.click(row(/Coronary artery disease/));
     expect(onSelectTarget).toHaveBeenLastCalledWith("cad");
+  });
+
+  it("colours each bar from the shared risk scale and fills it to the estimate", () => {
+    renderPanel(ready(predictResponse()));
+    const bar = (target: string) => document.querySelector<HTMLElement>(`[data-risk-bar="${target}"]`)!;
+    const cssColor = (hex: string) => `rgb(${[1, 3, 5].map((i) => parseInt(hex.slice(i, i + 2), 16)).join(", ")})`;
+
+    expect(bar("cad").style.backgroundColor).toBe(cssColor(riskColor(0.8123)));
+    expect(bar("lad").style.backgroundColor).toBe(cssColor(riskColor(0.581)));
+    expect(bar("lcx").style.width).toBe("22%");
+    expect(bar("rca").style.width).toBe("44%");
+  });
+
+  it("reports hover and focus on a row, and highlights the row hovered in the viewer", () => {
+    const onHoverTarget = vi.fn();
+    render(
+      <MetaContext.Provider value={META}>
+        <ResultsPanel
+          state={ready(predictResponse())}
+          selectedTarget="cad"
+          hoveredTarget="rca"
+          onSelectTarget={vi.fn()}
+          onHoverTarget={onHoverTarget}
+          onRetry={vi.fn()}
+        />
+      </MetaContext.Provider>,
+    );
+
+    fireEvent.mouseEnter(row(/^LAD/));
+    expect(onHoverTarget).toHaveBeenLastCalledWith("lad");
+    fireEvent.mouseLeave(row(/^LAD/));
+    expect(onHoverTarget).toHaveBeenLastCalledWith(null);
+    fireEvent.focus(row(/^LCX/));
+    expect(onHoverTarget).toHaveBeenLastCalledWith("lcx");
+    fireEvent.blur(row(/^LCX/));
+    expect(onHoverTarget).toHaveBeenLastCalledWith(null);
+    expect(row(/^RCA/).className.split(" ")).toContain("border-brand");
+    expect(row(/^LAD/).className.split(" ")).not.toContain("border-brand");
   });
 
   it("shows a hint when no patient is loaded", () => {

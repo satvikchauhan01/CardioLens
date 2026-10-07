@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useCallback, useState } from "react";
 import { BootError, BootSkeleton } from "./components/common/BootScreen";
 import { Card } from "./components/common/Card";
 import { DisclaimerBanner } from "./components/layout/DisclaimerBanner";
@@ -11,12 +11,23 @@ import { useBoot } from "./state/useBoot";
 
 export default function App() {
   const [activeTab, setActiveTab] = useState<TabId>("analysis");
+  const [resetCount, setResetCount] = useState(0);
   const { state: boot, retry } = useBoot();
   const methodLabel = TABS.find((tab) => tab.id === "method")?.label;
 
+  // Reset demo (PRODUCT_SPEC §5): back to the first view with the first sample, as on arrival.
+  const resetDemo = useCallback(() => {
+    setActiveTab("analysis");
+    setResetCount((count) => count + 1);
+  }, []);
+
   return (
     <div className="flex min-h-screen flex-col">
-      <Header activeTab={activeTab} onSelectTab={setActiveTab} />
+      <Header
+        activeTab={activeTab}
+        onSelectTab={setActiveTab}
+        onResetDemo={boot.status === "ready" ? resetDemo : undefined}
+      />
       <DisclaimerBanner />
       <main
         role="tabpanel"
@@ -30,7 +41,7 @@ export default function App() {
           <MetaContext.Provider value={boot.meta}>
             {/* Both views stay mounted, so the loaded patient survives a tab switch. */}
             <div hidden={activeTab !== "analysis"}>
-              <PatientAnalysisView samples={boot.samples} />
+              <PatientAnalysisView samples={boot.samples} resetCount={resetCount} />
             </div>
             <div hidden={activeTab !== "method"}>
               <Card title={methodLabel}>

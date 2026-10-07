@@ -4,17 +4,15 @@ import type { TargetId } from "../../api/types";
 import {
   FIX_FIELDS_HINT,
   IDLE_HINT,
-  OUT_OF_DATE,
-  OUT_OF_DATE_INVALID,
   PREDICT_ERROR_TITLE,
   RESULTS_HEADING,
   RISK_LEVEL_CAPTION,
-  UPDATING,
 } from "../../config/copy";
 import type { AnalysisState } from "../../state/analysisReducer";
 import { useMeta } from "../../state/MetaContext";
+import { AnalysisStatus } from "../common/AnalysisStatus";
 import { Card } from "../common/Card";
-import { Badge, ErrorNotice, Skeleton, Spinner } from "../common/Feedback";
+import { ErrorNotice, Skeleton } from "../common/Feedback";
 import { AgreementNote } from "./AgreementNote";
 import { CadSummaryCard } from "./CadSummaryCard";
 import { ExplanationPanel } from "./ExplanationPanel";
@@ -23,18 +21,20 @@ import { VesselList } from "./VesselList";
 interface ResultsPanelProps {
   state: AnalysisState;
   selectedTarget: TargetId;
+  hoveredTarget?: TargetId | null;
   onSelectTarget: (target: TargetId) => void;
+  onHoverTarget?: (target: TargetId | null) => void;
   onRetry: () => void;
 }
 
-function StatusAside({ status }: { status: AnalysisState["status"] }) {
-  if (status === "predicting") return <Spinner label={UPDATING} />;
-  if (status === "input_invalid") return <Badge>{OUT_OF_DATE_INVALID}</Badge>;
-  if (status === "error") return <Badge>{OUT_OF_DATE}</Badge>;
-  return null;
-}
-
-export function ResultsPanel({ state, selectedTarget, onSelectTarget, onRetry }: ResultsPanelProps) {
+export function ResultsPanel({
+  state,
+  selectedTarget,
+  hoveredTarget,
+  onSelectTarget,
+  onHoverTarget,
+  onRetry,
+}: ResultsPanelProps) {
   const meta = useMeta();
   // Not ready: keep showing the last good result, dimmed, instead of an empty panel.
   const shown = state.status === "ready" ? state.result : state.lastGoodResult;
@@ -46,7 +46,7 @@ export function ResultsPanel({ state, selectedTarget, onSelectTarget, onRetry }:
 
   if (!shown) {
     return (
-      <Card title={RESULTS_HEADING} aside={<StatusAside status={state.status} />}>
+      <Card title={RESULTS_HEADING} aside={<AnalysisStatus status={state.status} />}>
         {state.status === "predicting" && (
           <div className="space-y-3">
             <Skeleton className="h-20" />
@@ -70,7 +70,7 @@ export function ResultsPanel({ state, selectedTarget, onSelectTarget, onRetry }:
   const levelLabels = Object.fromEntries(meta.risk_levels.map((level) => [level.id, level.label]));
 
   return (
-    <Card title={RESULTS_HEADING} aside={<StatusAside status={state.status} />}>
+    <Card title={RESULTS_HEADING} aside={<AnalysisStatus status={state.status} />}>
       <div className="space-y-4">
         {error}
         <div aria-busy={state.status === "predicting"} className={`space-y-4 ${stale ? "opacity-60" : ""}`}>
@@ -89,7 +89,9 @@ export function ResultsPanel({ state, selectedTarget, onSelectTarget, onRetry }:
               predictions={shown.predictions}
               levelLabels={levelLabels}
               selectedTarget={selectedTarget}
+              hoveredTarget={hoveredTarget}
               onSelectTarget={onSelectTarget}
+              onHoverTarget={onHoverTarget}
             />
             <p className="mt-1.5 text-xs text-ink-muted">{RISK_LEVEL_CAPTION}</p>
           </div>
