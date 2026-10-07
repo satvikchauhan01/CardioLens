@@ -229,12 +229,13 @@ interface AnalysisState {
   source: "sample" | "typical" | null;
   sampleId: string | null;
   loadedValues: Record<string, FeatureValue> | null;   // values when the patient was loaded
-  values: Record<string, FeatureValue> | null;         // current (possibly modified) values
+  values: Record<string, FeatureValue | null> | null;  // current values; null = an empty field
   fieldErrors: Record<string, string>;
-  result: PredictResponse | null;                      // matches `values` when status = ready
+  result: PredictResponse | null;                      // matches `values`; set only when status = ready
   originalResult: PredictResponse | null;              // result for loadedValues (what-if deltas)
-  lastGoodResult: PredictResponse | null;              // shown as "Out of date" on error/invalid
-  latestRequestId: number;
+  lastGoodResult: PredictResponse | null;              // shown dimmed or "Out of date" when not ready
+  latestRequestId: number;                             // every load and edit takes a new id
+  loadRequestId: number | null;                        // the request that predicts loadedValues
   error: ApiError | null;
 }
 ```

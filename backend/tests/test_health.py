@@ -49,12 +49,13 @@ def test_default_artifacts_folder_is_named_by_its_repo_path():
     assert make_settings(DEFAULT_ARTIFACTS_DIR).artifacts_label == "backend/artifacts"
 
 
-def test_health_stays_503_until_the_registry_exists(tmp_path):
+def test_health_is_503_when_the_manifest_is_unreadable(tmp_path):
     (tmp_path / "manifest.json").write_text("{}")
     response = TestClient(create_app(make_settings(tmp_path))).get("/api/health")
 
     assert response.status_code == 503
     assert response.json()["models_loaded"] is False
+    assert "unreadable" in response.json()["reason"]
 
 
 def test_unknown_route_returns_404_envelope(client):

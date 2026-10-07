@@ -16,6 +16,9 @@
   --color-brand: #0369a1;
   --color-brand-strong: #075985;
   --color-brand-soft: #f0f9ff;
+  /* Form and request errors only, always with text. */
+  --color-danger: #b91c1c;
+  --color-danger-soft: #fef2f2;
 }
 
 @layer base {

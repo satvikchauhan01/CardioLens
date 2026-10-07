@@ -67,7 +67,7 @@ cd backend
 uvicorn app.main:app --reload --port 8000
 ```
 
-The prediction endpoints are not built yet, so `http://localhost:8000/api/health` currently answers 503 with the reason.
+`http://localhost:8000/api/health` answers 200 once the models are loaded. If the artifacts are missing or were trained with another scikit-learn version, the server still starts and answers 503 with the reason.
 
 ## Run the frontend
 
@@ -76,7 +76,7 @@ cd frontend
 npm run dev
 ```
 
-Open http://localhost:5173. The dev server forwards `/api` and `/static` to the backend on port 8000.
+Open http://localhost:5173 with the backend running. The dev server forwards `/api` and `/static` to the backend on port 8000. The first sample patient loads by itself; pick another sample or edit any input and the estimates and explanations update. The 3D heart and the Model & method tab are not built yet.
 
 ## Tests
 
