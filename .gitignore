@@ -1,0 +1,24 @@
+# Python
+.venv/
+__pycache__/
+*.py[cod]
+.pytest_cache/
+
+# Node
+node_modules/
+dist/
+
+# Environment files (this project has no secrets; ignored anyway)
+.env*
+!.env.example
+
+# OS and editor
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+CLAUDE_RULES.md
+# Not ignored on purpose: backend/data/raw/ (D-027) and backend/artifacts/ (D-028)
+
+.claude
+DECISIONS.md

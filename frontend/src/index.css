@@ -1,0 +1,25 @@
+@import "tailwindcss";
+
+/*
+ * Design tokens (PRODUCT_SPEC §11): light surfaces, blue primary, slate text.
+ * Risk colors are not defined here; they are reserved for risk and live in src/config/risk.ts (BR-5).
+ */
+@theme {
+  /* System font stack: nothing to download at runtime (D-007, D-033). */
+  --font-sans: ui-sans-serif, system-ui, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+
+  --color-canvas: #f8fafc;
+  --color-surface: #ffffff;
+  --color-line: #e2e8f0;
+  --color-ink: #0f172a;
+  --color-ink-muted: #475569;
+  --color-brand: #0369a1;
+  --color-brand-strong: #075985;
+  --color-brand-soft: #f0f9ff;
+}
+
+@layer base {
+  body {
+    @apply bg-canvas text-ink antialiased;
+  }
+}
