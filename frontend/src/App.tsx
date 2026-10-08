@@ -1,4 +1,5 @@
 import { useCallback, useState } from "react";
+import { AppErrorBoundary } from "./components/common/AppErrorBoundary";
 import { BootError, BootSkeleton } from "./components/common/BootScreen";
 import { MethodView } from "./components/evaluation/MethodView";
 import { DisclaimerBanner } from "./components/layout/DisclaimerBanner";
@@ -34,19 +35,21 @@ export default function App() {
         aria-labelledby={tabElementId(activeTab)}
         className="mx-auto w-full max-w-[100rem] flex-1 px-6 py-6"
       >
-        {boot.status === "booting" && <BootSkeleton />}
-        {boot.status === "boot_error" && <BootError error={boot.error} onRetry={retry} />}
-        {boot.status === "ready" && (
-          <MetaContext.Provider value={boot.meta}>
-            {/* Both views stay mounted, so the loaded patient and the metrics survive a tab switch. */}
-            <div hidden={activeTab !== "analysis"}>
-              <PatientAnalysisView samples={boot.samples} resetCount={resetCount} />
-            </div>
-            <div hidden={activeTab !== "method"}>
-              <MethodView active={activeTab === "method"} />
-            </div>
-          </MetaContext.Provider>
-        )}
+        <AppErrorBoundary>
+          {boot.status === "booting" && <BootSkeleton />}
+          {boot.status === "boot_error" && <BootError error={boot.error} onRetry={retry} />}
+          {boot.status === "ready" && (
+            <MetaContext.Provider value={boot.meta}>
+              {/* Both views stay mounted, so the loaded patient and the metrics survive a tab switch. */}
+              <div hidden={activeTab !== "analysis"}>
+                <PatientAnalysisView samples={boot.samples} resetCount={resetCount} />
+              </div>
+              <div hidden={activeTab !== "method"}>
+                <MethodView active={activeTab === "method"} />
+              </div>
+            </MetaContext.Provider>
+          )}
+        </AppErrorBoundary>
       </main>
       <Footer modelVersion={boot.status === "ready" ? boot.meta.model_version : undefined} />
     </div>

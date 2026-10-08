@@ -18,6 +18,9 @@ const EMPHASIS = 1.5; // while hovered or selected
 const RIM = 2.0; // the selected artery's dark rim
 const HIT = 2.6; // the invisible shell that takes the pointer
 const RIM_COLOR = "#0f172a";
+// For meshes that are only drawn. The pointer goes to the shell, and a mesh that cannot be hit
+// is also left out when the heart model builds its bounding-volume trees.
+export const NOT_PICKABLE = () => null;
 // The model's arteries are drawn a little thicker than life, so their colour can be read.
 const MODEL_THICKENING = 1.4;
 
@@ -72,10 +75,10 @@ function ArteryBody({
 
   return (
     <group name={objectName}>
-      <mesh geometry={emphasized ? shapes.emphasized : shapes.body} material={material} />
+      <mesh geometry={emphasized ? shapes.emphasized : shapes.body} material={material} raycast={NOT_PICKABLE} />
       {children?.(material, emphasized)}
       {selected && (
-        <mesh geometry={shapes.rim}>
+        <mesh geometry={shapes.rim} raycast={NOT_PICKABLE}>
           <meshBasicMaterial color={RIM_COLOR} side={BackSide} />
         </mesh>
       )}
@@ -128,7 +131,7 @@ export function Artery({ path, objectName, ...state }: ArteryProps) {
     <ArteryBody id={path.interactive ? (path.id as VesselId) : null} objectName={objectName} shapes={shapes} {...state}>
       {(material, emphasized) =>
         ends.map((end, index) => (
-          <mesh key={index} position={end} material={material}>
+          <mesh key={index} position={end} material={material} raycast={NOT_PICKABLE}>
             <sphereGeometry args={[path.radius * (emphasized ? EMPHASIS : 1), RADIAL_SEGMENTS, 8]} />
           </mesh>
         ))

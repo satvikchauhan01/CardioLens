@@ -34,6 +34,11 @@ export const BOOT_START_COMMANDS = [
 ];
 export const RETRY = "Retry";
 
+// An unexpected error while drawing a view (AppErrorBoundary)
+export const CRASH_TITLE = "Something went wrong on this page.";
+export const CRASH_TEXT = "Reload the page to start again. Nothing you entered was saved.";
+export const RELOAD = "Reload the page";
+
 // Patient input (F1, F2)
 export const PATIENT_HEADING = "Patient";
 export const SAMPLES_LABEL = "Sample patients";

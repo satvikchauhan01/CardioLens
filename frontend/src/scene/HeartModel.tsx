@@ -7,7 +7,7 @@ import { useEffect, useMemo, type RefObject } from "react";
 import type { Mesh } from "three";
 import { NO_ESTIMATE_COLOR } from "../config/risk";
 import { VESSELS, type VesselId } from "../config/vessels";
-import { ModelArtery, type ArteryPointer } from "./Artery";
+import { ModelArtery, NOT_PICKABLE, type ArteryPointer } from "./Artery";
 import { MODEL_ARTERY_PATHS } from "./heartModelData";
 import {
   BRANCHES_OBJECT,
@@ -29,6 +29,10 @@ interface HeartModelProps {
   onSelectHeart: () => void;
   onHoverVessel: (id: VesselId | null, pointer?: ArteryPointer) => void;
 }
+
+// three-mesh-bvh's AVERAGE split strategy. On this model it builds the trees in about 20 ms
+// instead of 150 ms with the default (SAH), and rays are as fast (BUILD_MAP T10.1).
+const SPLIT_AVERAGE = 1;
 
 const radiusOf = (id: VesselId) => MODEL_ARTERY_PATHS.find((path) => path.id === id)?.radius ?? 0.04;
 
@@ -54,16 +58,17 @@ export function HeartModel({
   useEffect(() => () => disposeHeartModel(parts), [parts]);
 
   return (
-    // Bounding-volume trees keep picking and the label checks fast on a mesh of this size.
-    <Bvh firstHitOnly>
+    // Bounding-volume trees keep picking and the label checks fast on a mesh of this size. They
+    // are built for the heart and the arteries' pointer shells only: nothing else is ever hit.
+    <Bvh firstHitOnly strategy={SPLIT_AVERAGE}>
       <mesh ref={heartRef} name={HEART_OBJECT} geometry={parts.heart} {...heartPointerHandlers(onSelectHeart)}>
         <meshStandardMaterial color={HEART_COLOR} roughness={0.85} />
       </mesh>
       {/* Not estimated by any model, so they take the legend's "No estimate" colour. */}
-      <mesh name={BRANCHES_OBJECT} geometry={parts.branches}>
+      <mesh name={BRANCHES_OBJECT} geometry={parts.branches} raycast={NOT_PICKABLE}>
         <meshStandardMaterial color={NO_ESTIMATE_COLOR} roughness={0.6} />
       </mesh>
-      <mesh name={LEFT_MAIN_OBJECT} geometry={parts.leftMain}>
+      <mesh name={LEFT_MAIN_OBJECT} geometry={parts.leftMain} raycast={NOT_PICKABLE}>
         <meshStandardMaterial color={NO_ESTIMATE_COLOR} roughness={0.6} />
       </mesh>
       {VESSELS.map((vessel) => (

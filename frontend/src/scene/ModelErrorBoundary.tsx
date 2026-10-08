@@ -1,4 +1,5 @@
-// F11: if the heart mesh cannot be loaded, render the fallback instead and tell the caller once.
+// F11: if what is inside cannot be drawn (the heart model, or the whole 3D scene), render the
+// fallback instead and tell the caller once.
 
 import { Component, type ReactNode } from "react";
 

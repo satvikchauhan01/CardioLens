@@ -27,6 +27,7 @@ import { formatPercent } from "../utils/format";
 import type { ArteryPointer } from "./Artery";
 import type { LabelElements } from "./labelAnchors";
 import { Legend } from "./Legend";
+import { ModelErrorBoundary } from "./ModelErrorBoundary";
 import { VesselSchematic2D } from "./VesselSchematic2D";
 import { ViewPresets, type ViewId, type ViewRequest } from "./ViewPresets";
 
@@ -55,7 +56,8 @@ export function ViewerPanel({
 }: ViewerPanelProps) {
   const meta = useMeta();
   const reducedMotion = usePrefersReducedMotion();
-  const [webgl] = useState(isWebGLAvailable);
+  // Without WebGL, or if the 3D scene fails for any reason, the 2D schematic is shown (F11).
+  const [webgl, setWebgl] = useState(isWebGLAvailable);
   const [showLabels, setShowLabels] = useState(true);
   const [modelFailed, setModelFailed] = useState(false);
   const [pointerVessel, setPointerVessel] = useState<VesselId | null>(null);
@@ -110,31 +112,35 @@ export function ViewerPanel({
     <Card title={VIEWER_HEADING} aside={<AnalysisStatus status={status} />}>
       <div
         ref={frame}
-        className="relative h-[26rem] overflow-hidden rounded-lg bg-canvas xl:h-[34rem]"
+        // In three columns the card stays in view while the page scrolls, so its height follows
+        // the window: canvas, controls, legend and notes fit on a 768 px high screen.
+        className="relative h-[26rem] overflow-hidden rounded-lg bg-canvas xl:h-[clamp(18rem,calc(100vh-21rem),34rem)]"
         style={{ cursor: webgl ? (pointerVessel ? "pointer" : "grab") : undefined }}
       >
         {webgl ? (
           <div role="img" aria-label={textAlternative} className="absolute inset-0">
-            <Suspense
-              fallback={
-                <div className="flex h-full items-center justify-center">
-                  <Spinner label={VIEWER_LOADING} />
-                </div>
-              }
-            >
-              <HeartViewer
-                colors={Object.fromEntries(vessels.flatMap((v) => (v.color ? [[v.id, v.color]] : [])))}
-                labelElements={labelElements}
-                selectedVessel={selectedVessel}
-                hoveredVessel={hoveredVessel}
-                viewRequest={viewRequest}
-                reducedMotion={reducedMotion}
-                onSelectVessel={onSelectTarget}
-                onSelectHeart={selectHeart}
-                onHoverVessel={hoverInCanvas}
-                onModelError={() => setModelFailed(true)}
-              />
-            </Suspense>
+            <ModelErrorBoundary fallback={null} onError={() => setWebgl(false)}>
+              <Suspense
+                fallback={
+                  <div className="flex h-full items-center justify-center">
+                    <Spinner label={VIEWER_LOADING} />
+                  </div>
+                }
+              >
+                <HeartViewer
+                  colors={Object.fromEntries(vessels.flatMap((v) => (v.color ? [[v.id, v.color]] : [])))}
+                  labelElements={labelElements}
+                  selectedVessel={selectedVessel}
+                  hoveredVessel={hoveredVessel}
+                  viewRequest={viewRequest}
+                  reducedMotion={reducedMotion}
+                  onSelectVessel={onSelectTarget}
+                  onSelectHeart={selectHeart}
+                  onHoverVessel={hoverInCanvas}
+                  onModelError={() => setModelFailed(true)}
+                />
+              </Suspense>
+            </ModelErrorBoundary>
             {/* Positioned by the scene every frame it draws; invisible until the first one. */}
             <div aria-hidden="true" hidden={!showLabels} className="pointer-events-none absolute inset-0 z-10">
               {vessels.map((vessel) => (

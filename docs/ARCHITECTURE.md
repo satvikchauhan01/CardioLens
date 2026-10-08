@@ -114,7 +114,7 @@ Training is an offline CLI step, not a runtime job.
 2. `GET /api/meta` → targets, feature schema, quick controls, thresholds, risk levels.
 3. `GET /api/samples` → 6 held-out sample patients.
 4. Frontend loads Sample A into state → DF-2 step 3.
-5. 3D chunk finishes → `useGLTF` loads `HEART_MODEL_URL` (`/models/heart.glb`; the download starts as soon as the chunk has arrived). Nothing is drawn while it loads. Loaded: the heart, the three artery meshes and the neutral vessels are read by name. A file that cannot be loaded, or lacks a named part, is caught by the error boundary → stand-in heart with a notice. With `HEART_MODEL_URL = null` the stand-in heart is drawn directly and nothing is fetched.
+5. 3D chunk finishes → `useGLTF` loads `HEART_MODEL_URL` (`/models/heart.glb`; the download starts as soon as the chunk has arrived). Nothing is drawn while it loads. Loaded: the heart, the three artery meshes and the neutral vessels are read by name. A file that cannot be loaded, or lacks a named part, is caught by the error boundary → stand-in heart with a notice. With `HEART_MODEL_URL = null` the stand-in heart is drawn directly and nothing is fetched. If the 3D scene itself fails (the chunk cannot be loaded, no graphics context can be created), the viewer shows the 2D schematic instead. An unexpected error anywhere else in a view is caught at the top of the page, which then offers to reload.
 
 **DF-2 Predict (load or edit)**
 1. User edits a field (or loads a sample/typical values/reset).
@@ -216,11 +216,13 @@ CardioLens/
 - ≤ 3 lights (ambient + 2 directional); no shadows; no HDRI.
 - Heart GLB: welded, simplified and meshopt-compressed (decoder bundled), no textures; 0.65 MB and about 92k triangles in six objects (limits: 5 MB, 150k triangles; T6.1).
 - Arteries: the model's own meshes; a thicker copy for hover/selection, a rim and a pointer shell are made once per artery at load. Materials reused, only `color`/`emissive` change. (Stand-in heart: tubes of ~96 × 12 segments.)
-- Bounding-volume trees (drei `Bvh`) on the model's meshes, so picking and the label visibility checks do not walk every triangle.
+- Bounding-volume trees (drei `Bvh`, average split strategy) on the heart and the three pointer shells only, so picking and the label visibility checks do not walk every triangle. Building them takes about 25 ms at load.
 - No per-frame allocations in `useFrame`; colors interpolated with preallocated `THREE.Color`.
 - R3F disposes JSX-declared resources on unmount; anything created manually is disposed in effect cleanup.
 
-**Budgets verified in T10.1:** FPS while orbiting on Satvik's laptop, draw calls < 50, asset size, predict latency.
+**Budgets verified in T10.1** (2026-10-08, AMD Ryzen 7 5800HS with integrated Radeon graphics): one frame of the turning heart is drawn in 1.1 ms (median) and 5.6 ms at most, against 16.7 ms for 60 FPS; 6 draw calls (limit 50); about 92k triangles (limit 150k); heart model 0.65 MB (limit 5 MB), ready about 46 ms after its download; predict 80 ms median and 85 ms at the 95th percentile from the browser (limit 300 ms); first estimates on screen about 0.13 s after opening the optimized build on localhost (limit 3 s). The frame rate seen on screen is still to be watched in Chrome by Satvik.
+
+**After a lost graphics context** (driver reset, waking from sleep) the browser restores the context and the viewer asks for one new frame, because nothing else would draw one while frames are on demand.
 
 ## 8. Security and privacy
 

@@ -1,8 +1,8 @@
 // The viewer panel when WebGL is available. The 3D scene itself cannot run in the test
 // environment, so it is replaced by a stand-in that shows what the panel passes to it.
 
-import { act, fireEvent, render, screen, waitFor } from "@testing-library/react";
-import { describe, expect, it, vi } from "vitest";
+import { act, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { riskColor } from "../config/risk";
 import { MetaContext } from "../state/MetaContext";
 import { META, predictResponse } from "../test/fixtures";
@@ -10,10 +10,12 @@ import type { HeartViewerProps } from "./HeartViewer";
 import { ViewerPanel } from "./ViewerPanel";
 
 let scene: HeartViewerProps | null = null;
+let sceneFails = false;
 
 vi.mock("../utils/environment", () => ({ isWebGLAvailable: () => true, usePrefersReducedMotion: () => false }));
 vi.mock("./HeartViewer", () => ({
   default: (props: HeartViewerProps) => {
+    if (sceneFails) throw new Error("the graphics context could not be created");
     scene = props;
     return <div data-testid="scene" />;
   },
@@ -38,6 +40,11 @@ function renderPanel(predicted = true) {
 
 const MODEL_NOTE =
   "The heart is a reference anatomy model, not this patient's heart. Only the three main arteries take a colour; their branches and the left main stem stay grey.";
+
+afterEach(() => {
+  sceneFails = false;
+  vi.restoreAllMocks();
+});
 
 describe("viewer panel with WebGL", () => {
   it("loads the 3D scene and gives it each artery's risk colour, the selection and the hover", async () => {
@@ -110,6 +117,22 @@ describe("viewer panel with WebGL", () => {
     act(() => scene!.onHoverVessel(null));
     expect(onHoverVessel).toHaveBeenLastCalledWith(null);
     expect(screen.getByRole("tooltip", { hidden: true }).hidden).toBe(true);
+  });
+
+  it("shows the 2D schematic when the 3D scene itself fails, and stays usable (F11)", async () => {
+    sceneFails = true;
+    // React also reports the caught error on the console; keep that out of the test output.
+    vi.spyOn(console, "error").mockImplementation(() => {});
+    const { onSelectTarget } = renderPanel();
+
+    const schematic = await screen.findByRole("group", { name: /Heart schematic/ });
+
+    expect(screen.getByText(/3D graphics are not available in this browser/)).toBeTruthy();
+    expect(screen.getByText(/stylised shape and the artery courses are schematic/)).toBeTruthy();
+    expect(screen.queryByRole("group", { name: "View" })).toBeNull();
+    expect(screen.queryByRole("checkbox", { name: "Labels" })).toBeNull();
+    fireEvent.click(within(schematic).getByRole("button", { name: /^LAD/ }));
+    expect(onSelectTarget).toHaveBeenLastCalledWith("lad");
   });
 
   it("says so when the heart model cannot be used and the stand-in is drawn instead (F11)", async () => {

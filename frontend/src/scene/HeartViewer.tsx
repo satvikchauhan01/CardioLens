@@ -155,7 +155,12 @@ export default function HeartViewer({ viewRequest, onModelError, ...scene }: Hea
       frameloop="demand"
       dpr={[1, 1.5]}
       camera={{ position: START_POSITION, fov: 35, near: 0.5, far: 40 }}
-      onCreated={({ camera }) => camera.lookAt(TARGET)}
+      onCreated={({ camera, gl, invalidate }) => {
+        camera.lookAt(TARGET);
+        // Frames are drawn on demand, so after the browser restores a lost graphics context
+        // (a driver reset, waking from sleep) nothing else would draw the scene again.
+        gl.domElement.addEventListener("webglcontextrestored", () => invalidate());
+      }}
     >
       {/* A low ambient level and a strong key light, so the shape of the heart reads from every side. */}
       <ambientLight intensity={1.0} />
