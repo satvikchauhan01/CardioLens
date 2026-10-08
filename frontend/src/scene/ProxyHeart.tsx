@@ -7,6 +7,8 @@ import { BufferAttribute, BufferGeometry, CatmullRomCurve3, DoubleSide, TubeGeom
 import { buildHeartMesh, GREAT_VESSELS } from "./heartShape";
 
 export const HEART_COLOR = "#e9e4df";
+// Vessels the models do not estimate: the left main stem and, on the heart model, the branches.
+export const NEUTRAL_VESSEL_COLOR = "#64748b";
 const GREAT_VESSEL_COLOR = "#dad4ce";
 const CLICK_TOLERANCE_PX = 5;
 

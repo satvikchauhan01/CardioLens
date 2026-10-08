@@ -1,16 +1,86 @@
-// A provided heart mesh (GLB). Used only when HEART_MODEL_URL is set; a load failure is caught by
-// ModelErrorBoundary, which shows the stand-in heart instead.
+// The heart model (public/models/heart.glb): the heart, the three coronary arteries as their own
+// meshes, and the left main stem and the branches in a neutral colour. A file that cannot be
+// loaded, or lacks a named part, is caught by ModelErrorBoundary, which shows the stand-in heart.
 
-import { useGLTF } from "@react-three/drei";
-import { heartPointerHandlers } from "./ProxyHeart";
+import { Bvh, useGLTF } from "@react-three/drei";
+import { useEffect, useMemo, type RefObject } from "react";
+import type { Mesh } from "three";
+import { NO_ESTIMATE_COLOR } from "../config/risk";
+import { VESSELS, type VesselId } from "../config/vessels";
+import { ModelArtery, type ArteryPointer } from "./Artery";
+import { MODEL_ARTERY_PATHS } from "./heartModelData";
+import {
+  BRANCHES_OBJECT,
+  disposeHeartModel,
+  HEART_OBJECT,
+  LEFT_MAIN_OBJECT,
+  readHeartModel,
+} from "./modelGeometry";
+import { HEART_COLOR, heartPointerHandlers } from "./ProxyHeart";
 
 interface HeartModelProps {
   url: string;
+  colors: Partial<Record<VesselId, string>>; // risk colour per artery; missing = no estimate
+  selectedVessel: VesselId | null;
+  hoveredVessel: VesselId | null;
+  reducedMotion: boolean;
+  heartRef: RefObject<Mesh | null>; // the heart surface, which can hide an artery's label
+  onSelectVessel: (id: VesselId) => void;
   onSelectHeart: () => void;
+  onHoverVessel: (id: VesselId | null, pointer?: ArteryPointer) => void;
 }
 
-export function HeartModel({ url, onSelectHeart }: HeartModelProps) {
+const radiusOf = (id: VesselId) => MODEL_ARTERY_PATHS.find((path) => path.id === id)?.radius ?? 0.04;
+
+/** Starts the download as soon as the viewer's code has arrived, before the canvas exists. */
+export function preloadHeartModel(url: string) {
+  useGLTF.preload(url, false, true);
+}
+
+export function HeartModel({
+  url,
+  colors,
+  selectedVessel,
+  hoveredVessel,
+  reducedMotion,
+  heartRef,
+  onSelectVessel,
+  onSelectHeart,
+  onHoverVessel,
+}: HeartModelProps) {
   // No Draco: its decoder would be fetched from a CDN (D-007). The meshopt decoder is bundled.
   const { scene } = useGLTF(url, false, true);
-  return <primitive object={scene} {...heartPointerHandlers(onSelectHeart)} />;
+  const parts = useMemo(() => readHeartModel(scene), [scene]);
+  useEffect(() => () => disposeHeartModel(parts), [parts]);
+
+  return (
+    // Bounding-volume trees keep picking and the label checks fast on a mesh of this size.
+    <Bvh firstHitOnly>
+      <mesh ref={heartRef} name={HEART_OBJECT} geometry={parts.heart} {...heartPointerHandlers(onSelectHeart)}>
+        <meshStandardMaterial color={HEART_COLOR} roughness={0.85} />
+      </mesh>
+      {/* Not estimated by any model, so they take the legend's "No estimate" colour. */}
+      <mesh name={BRANCHES_OBJECT} geometry={parts.branches}>
+        <meshStandardMaterial color={NO_ESTIMATE_COLOR} roughness={0.6} />
+      </mesh>
+      <mesh name={LEFT_MAIN_OBJECT} geometry={parts.leftMain}>
+        <meshStandardMaterial color={NO_ESTIMATE_COLOR} roughness={0.6} />
+      </mesh>
+      {VESSELS.map((vessel) => (
+        <ModelArtery
+          key={vessel.id}
+          id={vessel.id}
+          objectName={vessel.objectName}
+          geometry={parts.arteries[vessel.id]}
+          radius={radiusOf(vessel.id)}
+          color={colors[vessel.id] ?? NO_ESTIMATE_COLOR}
+          selected={selectedVessel === vessel.id}
+          hovered={hoveredVessel === vessel.id}
+          reducedMotion={reducedMotion}
+          onSelect={onSelectVessel}
+          onHover={onHoverVessel}
+        />
+      ))}
+    </Bvh>
+  );
 }

@@ -215,7 +215,7 @@ describe("Model & method view (F9)", () => {
     expect(section("Limitations").getAllByRole("listitem").map((item) => item.textContent)).toEqual(LIMITATIONS_TEXT);
   });
 
-  it("credits the dataset, the heart shape and the libraries (section 6)", async () => {
+  it("credits the dataset, the heart model and the libraries (section 6)", async () => {
     await loaded();
     const credits = section("Credits");
 
@@ -224,7 +224,9 @@ describe("Model & method view (F9)", () => {
     );
     expect(credits.getByRole("link", { name: "UCI dataset page" }).getAttribute("href")).toBe(META.dataset.url);
     expect(
-      credits.getByText("3D heart: a stylised stand-in shape generated in code. No third-party 3D model is used."),
+      credits.getByText(
+        "3D heart and coronary arteries: built from the BodyParts3D anatomy parts. Full credit and licence to be added.",
+      ),
     ).toBeTruthy();
     expect(
       credits.getByText("Built with scikit-learn, SHAP, FastAPI, React, three.js and React Three Fiber."),

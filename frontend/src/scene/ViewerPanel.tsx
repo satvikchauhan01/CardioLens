@@ -9,6 +9,7 @@ import { Card } from "../components/common/Card";
 import { Spinner } from "../components/common/Feedback";
 import {
   LABELS_TOGGLE,
+  MODEL_NOTE,
   MODEL_UNAVAILABLE_NOTICE,
   NO_ESTIMATE,
   SCHEMATIC_NOTICE,
@@ -24,7 +25,7 @@ import { useMeta } from "../state/MetaContext";
 import { isWebGLAvailable, usePrefersReducedMotion } from "../utils/environment";
 import { formatPercent } from "../utils/format";
 import type { ArteryPointer } from "./Artery";
-import type { LabelElements } from "./HeartViewer";
+import type { LabelElements } from "./labelAnchors";
 import { Legend } from "./Legend";
 import { VesselSchematic2D } from "./VesselSchematic2D";
 import { ViewPresets, type ViewId, type ViewRequest } from "./ViewPresets";
@@ -84,6 +85,9 @@ export function ViewerPanel({
   const textAlternative = `Heart with the three coronary arteries coloured by estimated probability. ${vessels
     .map((vessel) => vessel.spoken)
     .join(". ")}.`;
+
+  // The heart model is on screen unless there is none, it failed, or the 2D schematic is shown.
+  const showsModel = webgl && HEART_MODEL_URL !== null && !modelFailed;
 
   const selectHeart = useCallback(() => onSelectTarget("cad"), [onSelectTarget]);
 
@@ -191,9 +195,7 @@ export function ViewerPanel({
 
       <div className="mt-3 border-t border-line pt-3">
         <Legend />
-        {(!HEART_MODEL_URL || modelFailed) && (
-          <p className="mt-1 text-xs text-ink-muted">{STAND_IN_NOTE}</p>
-        )}
+        <p className="mt-1 text-xs text-ink-muted">{showsModel ? MODEL_NOTE : STAND_IN_NOTE}</p>
       </div>
     </Card>
   );

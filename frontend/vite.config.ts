@@ -16,8 +16,9 @@ export default defineConfig({
     },
   },
   build: {
-    // The 3D viewer (three.js) is one lazy chunk of about 0.9 MB, loaded after the page is usable.
-    chunkSizeWarningLimit: 1000,
+    // The 3D viewer (three.js, the model loader and its decoder) is one lazy chunk of about 1 MB
+    // (280 kB gzipped), loaded after the page is usable.
+    chunkSizeWarningLimit: 1100,
   },
   test: {
     environment: "jsdom",

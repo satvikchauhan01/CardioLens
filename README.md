@@ -59,6 +59,16 @@ python -m ml.train
 
 `ml.inspect_data` writes a factual report about the dataset file (`backend/artifacts/data_report.md`). `ml.train` runs the whole pipeline in about a minute on a laptop CPU: it holds out six sample patients, cross-validates three candidate models per target, refits the selected one and writes the models, metrics, plots and schema. Seeds are fixed, so a rerun reproduces the same metrics and predictions.
 
+## Rebuild the 3D heart model
+
+The model is already in `frontend/public/models/heart.glb`, so this step is only needed to change it. It needs the folder of source anatomy parts (`.obj` files, not part of this repository) and Node.js.
+
+```powershell
+backend\.venv\Scripts\python.exe tools\heart_model\build_heart.py --source "<folder with the .obj files>"
+```
+
+The script selects the outside of the heart and the coronary arteries, places them in the viewer's axes and scale, traces the centre line of each artery, and writes the model together with `frontend/src/scene/heartModelData.ts`. Its last step runs glTF-Transform 4.5.1 through `npx` (downloaded on first use) to weld, simplify and compress the model. The frontend tests load the model file and fail if it and the data file do not match.
+
 ## Run the backend
 
 ```powershell
@@ -104,6 +114,7 @@ The backend suite takes about 40 seconds: besides the unit and API tests it trai
 CardioLens/
 ├── README.md
 ├── docs/               # specification
+├── tools/heart_model/   # builds the 3D heart model from the source anatomy parts
 ├── backend/
 │   ├── data/raw/       # dataset .xlsx
 │   ├── ml/             # offline training pipeline
@@ -111,7 +122,7 @@ CardioLens/
 │   ├── artifacts/      # trained models, metrics, plots (generated, committed)
 │   └── tests/
 └── frontend/
-    ├── public/models/  # optimized heart asset
+    ├── public/models/  # heart.glb: the heart and coronary arteries (generated, committed)
     └── src/            # api, config, state, components, scene
 ```
 
@@ -139,7 +150,9 @@ Each prediction is explained with SHAP values (exact explainers for linear and t
 **Dataset.** Alizadehsani, R., Roshanzamir, M., & Sani, Z. (2013). extention of Z-Alizadeh sani dataset [Dataset]. UCI Machine Learning Repository. https://doi.org/10.24432/C5461K — licensed under CC BY 4.0.
 Dataset page: https://archive.ics.uci.edu/dataset/411/extention+of+z+alizadeh+sani+dataset
 
-**3D heart model.** No third-party model is used yet: the heart is a stylised stand-in shape generated in code (`frontend/src/scene/heartShape.ts`), and the artery courses are schematic. An open-licensed mesh will be credited here, with author, source URL and license, when it replaces the stand-in.
+**3D heart model.** The heart and the coronary arteries in `frontend/public/models/heart.glb` are built from BodyParts3D anatomy parts (one file per anatomical structure, named with its FMA id) by `tools/heart_model/build_heart.py`. **The full credit, source URL and licence of the model are still to be added here**, and in the app's footer and credits, before this repository is published with the model.
+
+The model is a reference anatomy, not a patient's heart. Only the trunks of the three vessels the models estimate (LAD, LCX, RCA) take the risk colour; the left main stem and the branches are drawn in grey. If the model file cannot be loaded, the app draws a stylised stand-in heart generated in code (`frontend/src/scene/heartShape.ts`) instead.
 
 ## Limitations
 

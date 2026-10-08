@@ -17,6 +17,8 @@ export type TabId = (typeof TABS)[number]["id"];
 
 export const FOOTER_DATASET =
   "Dataset: “extention of Z-Alizadeh sani dataset”, Alizadehsani, Roshanzamir & Sani (2013), UCI Machine Learning Repository, CC BY 4.0.";
+// Short form of CREDIT_HEART below; the licence is added to both when it is supplied.
+export const FOOTER_HEART = "3D heart: BodyParts3D.";
 export const FOOTER_NOTE = "Educational prototype";
 export const MODEL_VERSION_LABEL = "Model version";
 
@@ -126,8 +128,9 @@ export const LIMITATIONS = [
   "What-if changes show model sensitivity, not the effect of any treatment.",
 ];
 export const CREDITS_HEADING = "Credits";
+// The source is named; its licence line and full credit are still to be supplied (BUILD_MAP T6.1).
 export const CREDIT_HEART =
-  "3D heart: a stylised stand-in shape generated in code. No third-party 3D model is used.";
+  "3D heart and coronary arteries: built from the BodyParts3D anatomy parts. Full credit and licence to be added.";
 export const CREDIT_LIBRARIES =
   "Built with scikit-learn, SHAP, FastAPI, React, three.js and React Three Fiber.";
 
@@ -155,6 +158,8 @@ export const LEGEND_NOTE =
   "Color shows each artery's model-estimated probability of ≥50% narrowing. It does not show where along the artery a narrowing might be.";
 export const STAND_IN_NOTE =
   "The heart is a stylised shape and the artery courses are schematic, not patient anatomy.";
+export const MODEL_NOTE =
+  "The heart is a reference anatomy model, not this patient's heart. Only the three main arteries take a colour; their branches and the left main stem stay grey.";
 export const MODEL_UNAVAILABLE_NOTICE = "Detailed heart model unavailable";
 export const SCHEMATIC_NOTICE =
   "3D graphics are not available in this browser, so the arteries are shown as a flat front view. Dashed parts run behind the heart.";

@@ -1,29 +1,39 @@
-// One coronary artery: a tube along its path, coloured by risk (BR-5). A wider invisible shell
-// takes the pointer, and the tube is drawn thicker while it is hovered or selected, with a dark
-// rim when it is the selected one.
+// One coronary artery, coloured by risk (BR-5). A wider invisible shell takes the pointer, and the
+// artery is drawn thicker while it is hovered or selected, with a dark rim when it is the selected
+// one. The shape is either the model's own artery mesh or, on the stand-in heart, a tube along a path.
 
-import { useFrame, useThree, type ThreeEvent } from "@react-three/fiber";
-import { useEffect, useMemo, useRef } from "react";
-import { BackSide, CatmullRomCurve3, Color, MeshStandardMaterial, TubeGeometry, Vector3 } from "three";
+import type { ThreeEvent } from "@react-three/fiber";
+import { useEffect, useMemo, type ReactNode } from "react";
+import { BackSide, CatmullRomCurve3, TubeGeometry, Vector3, type BufferGeometry, type MeshStandardMaterial } from "three";
 import type { VesselId } from "../config/vessels";
 import type { ArteryPath } from "./arteryPaths";
+import { inflated } from "./modelGeometry";
+import { useRiskMaterial } from "./useRiskMaterial";
 
-export const COLOR_TRANSITION_SECONDS = 0.4;
 const CLICK_TOLERANCE_PX = 5; // more pointer travel than this is an orbit drag, not a click
 const TUBULAR_SEGMENTS = 96;
 const RADIAL_SEGMENTS = 12;
-const EMPHASIS = 1.5; // radius factor while hovered or selected
-const RIM = 2.0; // radius factor of the selected artery's dark rim
+// Radius factors, relative to the artery's own radius.
+const EMPHASIS = 1.5; // while hovered or selected
+const RIM = 2.0; // the selected artery's dark rim
+const HIT = 2.6; // the invisible shell that takes the pointer
 const RIM_COLOR = "#0f172a";
+// The model's arteries are drawn a little thicker than life, so their colour can be read.
+const MODEL_THICKENING = 1.4;
 
 export interface ArteryPointer {
   clientX: number;
   clientY: number;
 }
 
-interface ArteryProps {
-  path: ArteryPath;
-  objectName: string;
+interface ArteryShapes {
+  body: BufferGeometry;
+  emphasized: BufferGeometry;
+  rim: BufferGeometry;
+  hit: BufferGeometry;
+}
+
+interface ArteryState {
   color: string;
   selected?: boolean;
   hovered?: boolean;
@@ -32,104 +42,46 @@ interface ArteryProps {
   onHover?: (id: VesselId | null, pointer?: ArteryPointer) => void;
 }
 
-export function Artery({
-  path,
+interface ArteryBodyProps extends ArteryState {
+  id: VesselId | null; // null: drawn but not interactive (the left main stem)
+  objectName: string;
+  shapes: ArteryShapes;
+  // Extra pieces in the artery's material, e.g. the rounded ends of a tube.
+  children?: (material: MeshStandardMaterial, emphasized: boolean) => ReactNode;
+}
+
+function ArteryBody({
+  id,
   objectName,
+  shapes,
   color,
   selected = false,
   hovered = false,
   reducedMotion = false,
   onSelect,
   onHover,
-}: ArteryProps) {
-  const invalidate = useThree((state) => state.invalidate);
-
-  const { tube, thickTube, rim, hitShell, ends } = useMemo(() => {
-    const points = path.points.map((point) => new Vector3(...point));
-    const curve = new CatmullRomCurve3(points, false, "centripetal");
-    const tubeOf = (factor: number, tubular = TUBULAR_SEGMENTS, radial = RADIAL_SEGMENTS) =>
-      new TubeGeometry(curve, tubular, path.radius * factor, radial, false);
-    return {
-      tube: tubeOf(1),
-      thickTube: tubeOf(EMPHASIS),
-      rim: tubeOf(RIM),
-      hitShell: tubeOf(2.6, TUBULAR_SEGMENTS / 2, 8),
-      ends: [points[0], points[points.length - 1]],
-    };
-  }, [path]);
-
-  // One material per artery, created once with the first colour; later colours are tweened below.
-  const material = useMemo(
-    () => new MeshStandardMaterial({ color, emissive: color, emissiveIntensity: 0.3, roughness: 0.45 }),
-    [],
-  );
-
-  useEffect(
-    () => () => {
-      tube.dispose();
-      thickTube.dispose();
-      rim.dispose();
-      hitShell.dispose();
-    },
-    [tube, thickTube, rim, hitShell],
-  );
-  useEffect(() => () => material.dispose(), [material]);
-
-  // Colour tween without per-frame allocations: two preallocated colours and a start time.
-  const from = useRef(new Color(color));
-  const to = useRef(new Color(color));
-  const startedAt = useRef<number | null>(null);
-  const animating = useRef(false);
-
-  useEffect(() => {
-    from.current.copy(material.color);
-    to.current.set(color);
-    if (reducedMotion) {
-      material.color.copy(to.current);
-      material.emissive.copy(to.current);
-      animating.current = false;
-    } else {
-      startedAt.current = null;
-      animating.current = true;
-    }
-    invalidate();
-  }, [color, reducedMotion, material, invalidate]);
-
-  useFrame(({ clock }) => {
-    if (!animating.current) return;
-    startedAt.current ??= clock.elapsedTime;
-    const progress = Math.min(1, (clock.elapsedTime - startedAt.current) / COLOR_TRANSITION_SECONDS);
-    material.color.lerpColors(from.current, to.current, progress);
-    material.emissive.copy(material.color);
-    if (progress >= 1) animating.current = false;
-    else invalidate();
-  });
-
+  children,
+}: ArteryBodyProps) {
+  const material = useRiskMaterial(color, reducedMotion);
   const emphasized = selected || hovered;
-  const radius = path.radius * (emphasized ? EMPHASIS : 1);
-  const id = path.id as VesselId;
 
   function hover(event: ThreeEvent<PointerEvent>) {
     event.stopPropagation();
-    onHover?.(id, { clientX: event.nativeEvent.clientX, clientY: event.nativeEvent.clientY });
+    if (id) onHover?.(id, { clientX: event.nativeEvent.clientX, clientY: event.nativeEvent.clientY });
   }
 
   return (
     <group name={objectName}>
-      <mesh geometry={emphasized ? thickTube : tube} material={material} />
-      {ends.map((end, index) => (
-        <mesh key={index} position={end} material={material}>
-          <sphereGeometry args={[radius, RADIAL_SEGMENTS, 8]} />
-        </mesh>
-      ))}
+      <mesh geometry={emphasized ? shapes.emphasized : shapes.body} material={material} />
+      {children?.(material, emphasized)}
       {selected && (
-        <mesh geometry={rim}>
+        <mesh geometry={shapes.rim}>
           <meshBasicMaterial color={RIM_COLOR} side={BackSide} />
         </mesh>
       )}
-      {path.interactive && (
+      {id && (
         <mesh
-          geometry={hitShell}
+          geometry={shapes.hit}
           visible={false}
           onPointerOver={hover}
           onPointerMove={hover}
@@ -142,4 +94,69 @@ export function Artery({
       )}
     </group>
   );
+}
+
+function useDisposal(geometries: BufferGeometry[]) {
+  useEffect(() => () => geometries.forEach((geometry) => geometry.dispose()), geometries);
+}
+
+interface ArteryProps extends ArteryState {
+  path: ArteryPath;
+  objectName: string;
+}
+
+/** An artery drawn as a tube along a path: the stand-in heart's arteries. */
+export function Artery({ path, objectName, ...state }: ArteryProps) {
+  const { shapes, ends } = useMemo(() => {
+    const points = path.points.map((point) => new Vector3(...point));
+    const curve = new CatmullRomCurve3(points, false, "centripetal");
+    const tubeOf = (factor: number, tubular = TUBULAR_SEGMENTS, radial = RADIAL_SEGMENTS) =>
+      new TubeGeometry(curve, tubular, path.radius * factor, radial, false);
+    return {
+      shapes: {
+        body: tubeOf(1),
+        emphasized: tubeOf(EMPHASIS),
+        rim: tubeOf(RIM),
+        hit: tubeOf(HIT, TUBULAR_SEGMENTS / 2, 8),
+      },
+      ends: [points[0], points[points.length - 1]],
+    };
+  }, [path]);
+  useDisposal([shapes.body, shapes.emphasized, shapes.rim, shapes.hit]);
+
+  return (
+    <ArteryBody id={path.interactive ? (path.id as VesselId) : null} objectName={objectName} shapes={shapes} {...state}>
+      {(material, emphasized) =>
+        ends.map((end, index) => (
+          <mesh key={index} position={end} material={material}>
+            <sphereGeometry args={[path.radius * (emphasized ? EMPHASIS : 1), RADIAL_SEGMENTS, 8]} />
+          </mesh>
+        ))
+      }
+    </ArteryBody>
+  );
+}
+
+interface ModelArteryProps extends ArteryState {
+  id: VesselId;
+  objectName: string;
+  geometry: BufferGeometry; // the artery's own mesh from the heart model
+  radius: number; // its typical radius, which sets how much thicker the other shapes are
+}
+
+/** An artery drawn with its own mesh from the heart model. */
+export function ModelArtery({ id, objectName, geometry, radius, ...state }: ModelArteryProps) {
+  const shapes = useMemo(
+    () => ({
+      body: inflated(geometry, radius * (MODEL_THICKENING - 1)),
+      emphasized: inflated(geometry, radius * (MODEL_THICKENING * EMPHASIS - 1)),
+      rim: inflated(geometry, radius * (MODEL_THICKENING * RIM - 1)),
+      hit: inflated(geometry, radius * (MODEL_THICKENING * HIT - 1)),
+    }),
+    [geometry, radius],
+  );
+  // The model owns `geometry`; the copies are made, and freed, here.
+  useDisposal([shapes.body, shapes.emphasized, shapes.rim, shapes.hit]);
+
+  return <ArteryBody id={id} objectName={objectName} shapes={shapes} {...state} />;
 }

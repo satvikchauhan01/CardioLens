@@ -213,16 +213,26 @@ interface VesselConfig {
   objectName: `artery-${"lad" | "lcx" | "rca"}`;
   preferredView: "front" | "back" | "left" | "right";   // preset used when selected from the list
 }
-const HEART_MODEL_URL: string | null;   // null while the stand-in heart is used (D-051)
+const HEART_MODEL_URL: string | null;   // "/models/heart.glb"; null draws the stand-in heart only
 
-// src/scene/arteryPaths.ts — control points in the heart model's coordinate space
+// public/models/heart.glb — named objects, in the coordinate space below (built by tools/heart_model):
+//   "heart" · "artery-lad" · "artery-lcx" · "artery-rca" (the trunk of each vessel)
+//   "artery-left-main" · "artery-branches" (neutral: not estimated by any model)
+// src/scene/heartModelData.ts — generated with the model: MODEL_ARTERY_PATHS (centre line, radius and
+//   label anchors per artery, as ArteryPath), MODEL_BOUNDS, MODEL_UNITS_PER_MM, MODEL_SOURCES (FMA ids)
+// Coordinate space: +x patient's left, +y up, +z towards the viewer in the front view; the model is
+//   2.9 units tall (about 118 mm) and centred on the camera target.
+
+// src/scene/arteryPaths.ts — the stand-in heart's paths, same structure and coordinate space
 type Vec3 = [number, number, number];
 interface ArteryPath {
   id: "lad" | "lcx" | "rca" | "left_main";   // left_main: neutral, non-interactive trunk
   points: Vec3[];
   radius: number;
   interactive: boolean;
-  labelAnchors: { point: Vec3; normal: Vec3 }[];   // where the label may sit; the one facing the camera is used
+  labelAnchors: { point: Vec3; normal: Vec3 }[];   // where the label may sit; `normal` is the middle of the
+                                                   // directions it can be seen from. The one that faces the
+                                                   // camera and is not hidden by the heart is used
 }
 
 // src/state/analysisReducer.ts — PRODUCT_SPEC §6.2

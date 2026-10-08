@@ -114,7 +114,7 @@ Training is an offline CLI step, not a runtime job.
 2. `GET /api/meta` → targets, feature schema, quick controls, thresholds, risk levels.
 3. `GET /api/samples` → 6 held-out sample patients.
 4. Frontend loads Sample A into state → DF-2 step 3.
-5. 3D chunk finishes → if `HEART_MODEL_URL` is set, `useGLTF` loads it (stand-in heart while loading → model, or error boundary → stand-in heart with a notice). While it is `null` (D-051) the stand-in heart is drawn directly and nothing is fetched.
+5. 3D chunk finishes → `useGLTF` loads `HEART_MODEL_URL` (`/models/heart.glb`; the download starts as soon as the chunk has arrived). Nothing is drawn while it loads. Loaded: the heart, the three artery meshes and the neutral vessels are read by name. A file that cannot be loaded, or lacks a named part, is caught by the error boundary → stand-in heart with a notice. With `HEART_MODEL_URL = null` the stand-in heart is drawn directly and nothing is fetched.
 
 **DF-2 Predict (load or edit)**
 1. User edits a field (or loads a sample/typical values/reset).
@@ -144,6 +144,7 @@ CardioLens/
 ├── CLAUDE_RULES.md
 ├── README.md
 ├── docs/                                   # this specification
+├── tools/heart_model/build_heart.py        # builds the heart model and its data file from the source anatomy parts
 ├── backend/
 │   ├── requirements.txt                    # pinned versions
 │   ├── requirements-dev.txt                # pytest, httpx
@@ -170,7 +171,7 @@ CardioLens/
     ├── index.html
     ├── package.json
     ├── vite.config.ts                      # /api and /static proxy → http://localhost:8000
-    ├── public/models/heart.glb             # optimized heart asset (provided by Satvik; not there yet, D-051)
+    ├── public/models/heart.glb             # heart + coronary arteries, built by tools/heart_model (D-061, D-062)
     └── src/
         ├── main.tsx, App.tsx
         ├── api/        client.ts, types.ts
@@ -179,9 +180,10 @@ CardioLens/
         ├── utils/      format.ts, environment.ts
         ├── components/ layout/, patient/, results/, evaluation/, common/
         └── scene/      ViewerPanel.tsx (DOM container) · HeartViewer.tsx (lazy WebGL scene),
-                        HeartModel.tsx, ProxyHeart.tsx, ModelErrorBoundary.tsx, Artery.tsx,
-                        heartShape.ts (stand-in heart as math), arteryPaths.ts,
-                        ViewPresets.tsx, Legend.tsx, VesselSchematic2D.tsx
+                        HeartModel.tsx, modelGeometry.ts, heartModelData.ts (generated),
+                        Artery.tsx, useRiskMaterial.ts, LabelProjector.tsx, labelAnchors.ts,
+                        ProxyHeart.tsx, heartShape.ts, arteryPaths.ts (stand-in heart and its paths),
+                        ModelErrorBoundary.tsx, ViewPresets.tsx, Legend.tsx, VesselSchematic2D.tsx
 ```
 
 ## 5. Frontend state
@@ -196,11 +198,11 @@ CardioLens/
 
 **Consistency tests.**
 - Backend: every target in `TARGETS` has a model bundle, metrics entry and plots.
-- Frontend: every `vessel` target from `/api/meta` has an entry in the vessel registry and a path in `arteryPaths.ts`, and vice versa (fails the test suite on mismatch).
+- Frontend: every `vessel` target from `/api/meta` has an entry in the vessel registry, a named mesh in `heart.glb`, a centre line in `heartModelData.ts` and a path in `arteryPaths.ts`, and vice versa. The tests load the real model file and also check that each artery mesh lies along its centre line and is built from the trunk of that artery only (fails the test suite on mismatch).
 
 **Adding a clinical feature:** add the column + metadata entry (DATA_MODEL §3) → retrain → the form, validation and explanations pick it up from the schema. No UI code change.
 **Adding a prediction model/target:** add to `TARGETS` (+ source column) → retrain → if it is a vessel, add a registry entry and a path.
-**Adding an anatomical structure:** add a path (or mesh name) in `arteryPaths.ts` and a registry entry.
+**Adding an anatomical structure:** list its source parts in `tools/heart_model/build_heart.py`, rebuild the model, and add a registry entry; for the stand-in heart, add a path in `arteryPaths.ts`.
 
 ## 7. Performance plan (TC-1)
 
@@ -212,8 +214,9 @@ CardioLens/
 - `frameloop="demand"`: render only on interaction or color transitions (`invalidate()` during tweens).
 - `dpr={[1, 1.5]}`; antialias on.
 - ≤ 3 lights (ambient + 2 directional); no shadows; no HDRI.
-- Heart GLB optimized with meshopt + resized textures, ≤ 5 MB, target ≤ 150k triangles (T6.1).
-- Artery tubes: ~64 tubular segments × 12 radial segments each; materials reused, only `color`/`emissive` change.
+- Heart GLB: welded, simplified and meshopt-compressed (decoder bundled), no textures; 0.65 MB and about 92k triangles in six objects (limits: 5 MB, 150k triangles; T6.1).
+- Arteries: the model's own meshes; a thicker copy for hover/selection, a rim and a pointer shell are made once per artery at load. Materials reused, only `color`/`emissive` change. (Stand-in heart: tubes of ~96 × 12 segments.)
+- Bounding-volume trees (drei `Bvh`) on the model's meshes, so picking and the label visibility checks do not walk every triangle.
 - No per-frame allocations in `useFrame`; colors interpolated with preallocated `THREE.Color`.
 - R3F disposes JSX-declared resources on unmount; anything created manually is disposed in effect cleanup.
 

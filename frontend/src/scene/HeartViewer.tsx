@@ -5,14 +5,17 @@
 import { OrbitControls } from "@react-three/drei";
 import { Canvas, useFrame, useThree } from "@react-three/fiber";
 import { Suspense, useEffect, useRef, type RefObject } from "react";
-import { MathUtils, Spherical, Vector3 } from "three";
+import { MathUtils, Spherical, Vector3, type Mesh } from "three";
 import { NO_ESTIMATE_COLOR } from "../config/risk";
 import { HEART_MODEL_URL, VESSELS, type VesselId } from "../config/vessels";
 import { Artery, type ArteryPointer } from "./Artery";
 import { ARTERY_PATHS, arteryPath } from "./arteryPaths";
-import { HeartModel } from "./HeartModel";
+import { HeartModel, preloadHeartModel } from "./HeartModel";
+import { MODEL_ARTERY_PATHS } from "./heartModelData";
+import type { LabelElements } from "./labelAnchors";
+import { LabelProjector } from "./LabelProjector";
 import { ModelErrorBoundary } from "./ModelErrorBoundary";
-import { ProxyHeart } from "./ProxyHeart";
+import { NEUTRAL_VESSEL_COLOR, ProxyHeart } from "./ProxyHeart";
 import {
   CAMERA_DISTANCE,
   CAMERA_TARGET,
@@ -22,8 +25,10 @@ import {
   type ViewRequest,
 } from "./ViewPresets";
 
-const LEFT_MAIN_COLOR = "#64748b";
 const TARGET = new Vector3(...CAMERA_TARGET);
+
+// This file is the lazy 3D chunk: the model's download starts as soon as it has arrived.
+if (HEART_MODEL_URL) preloadHeartModel(HEART_MODEL_URL);
 
 function viewSpherical(view: ViewId, out = new Spherical()): Spherical {
   const { azimuth, polar } = VIEWS[view];
@@ -75,55 +80,6 @@ function CameraRig({ request, reducedMotion }: { request: ViewRequest | null; re
   return null;
 }
 
-export type LabelElements = Partial<Record<VesselId, HTMLElement | null>>;
-
-const FACING_ENOUGH = 0.25; // how squarely an anchor must face the camera to carry the label
-
-const LABELS = ARTERY_PATHS.filter((path) => path.interactive).map((path) => ({
-  id: path.id as VesselId,
-  anchors: path.labelAnchors.map((anchor) => ({
-    point: new Vector3(...anchor.point),
-    normal: new Vector3(...anchor.normal),
-  })),
-}));
-
-/**
- * Keeps the page's label elements over their arteries. The labels are ordinary DOM elements owned
- * by ViewerPanel; this only moves them. Each label sits on the part of its artery that faces the
- * camera and hides when none does.
- */
-function LabelProjector({ elements }: { elements: RefObject<LabelElements> }) {
-  const projected = useRef(new Vector3());
-  const toCamera = useRef(new Vector3());
-  // The anchor each label uses; it is kept until it turns away, so the label does not flicker.
-  const inUse = useRef(LABELS.map(() => 0));
-
-  useFrame(({ camera, size }) => {
-    const facing = (anchor: { point: Vector3; normal: Vector3 }) =>
-      toCamera.current.copy(camera.position).sub(anchor.point).normalize().dot(anchor.normal);
-
-    LABELS.forEach((label, labelIndex) => {
-      const element = elements.current?.[label.id];
-      if (!element) return;
-      if (facing(label.anchors[inUse.current[labelIndex]]) < FACING_ENOUGH) {
-        let best = 0;
-        for (let index = 1; index < label.anchors.length; index += 1) {
-          if (facing(label.anchors[index]) > facing(label.anchors[best])) best = index;
-        }
-        inUse.current[labelIndex] = best;
-      }
-      const anchor = label.anchors[inUse.current[labelIndex]];
-      projected.current.copy(anchor.point).project(camera);
-      const x = (projected.current.x * 0.5 + 0.5) * size.width;
-      const y = (-projected.current.y * 0.5 + 0.5) * size.height;
-      element.style.transform = `translate(-50%, -50%) translate(${x.toFixed(1)}px, ${y.toFixed(1)}px)`;
-      element.style.opacity = facing(anchor) > FACING_ENOUGH ? "1" : "0";
-    });
-  });
-
-  return null;
-}
-
 export interface HeartViewerProps {
   colors: Partial<Record<VesselId, string>>; // risk colour per artery; missing = no estimate
   labelElements: RefObject<LabelElements>; // DOM labels to keep over the arteries
@@ -137,44 +93,25 @@ export interface HeartViewerProps {
   onModelError: () => void;
 }
 
-export default function HeartViewer({
+type SceneProps = Omit<HeartViewerProps, "viewRequest" | "onModelError">;
+
+/** The stand-in heart with tube arteries: shown when there is no model file, or it cannot be used. */
+function StandInScene({
   colors,
   labelElements,
   selectedVessel,
   hoveredVessel,
-  viewRequest,
   reducedMotion,
   onSelectVessel,
   onSelectHeart,
   onHoverVessel,
-  onModelError,
-}: HeartViewerProps) {
-  const standIn = <ProxyHeart onSelectHeart={onSelectHeart} />;
+}: SceneProps) {
   const leftMain = arteryPath("left_main");
 
   return (
-    <Canvas
-      flat
-      frameloop="demand"
-      dpr={[1, 1.5]}
-      camera={{ position: START_POSITION, fov: 35, near: 0.5, far: 40 }}
-      onCreated={({ camera }) => camera.lookAt(TARGET)}
-    >
-      <ambientLight intensity={1.5} />
-      <directionalLight position={[3, 5, 6]} intensity={1.6} />
-      <directionalLight position={[-5, 1, -4]} intensity={0.7} />
-
-      {HEART_MODEL_URL ? (
-        <ModelErrorBoundary fallback={standIn} onError={onModelError}>
-          <Suspense fallback={standIn}>
-            <HeartModel url={HEART_MODEL_URL} onSelectHeart={onSelectHeart} />
-          </Suspense>
-        </ModelErrorBoundary>
-      ) : (
-        standIn
-      )}
-
-      {leftMain && <Artery path={leftMain} objectName="artery-left-main" color={LEFT_MAIN_COLOR} />}
+    <>
+      <ProxyHeart onSelectHeart={onSelectHeart} />
+      {leftMain && <Artery path={leftMain} objectName="artery-left-main" color={NEUTRAL_VESSEL_COLOR} />}
       {VESSELS.map((vessel) => {
         const path = ARTERY_PATHS.find((candidate) => candidate.id === vessel.id);
         if (!path) return null;
@@ -192,10 +129,52 @@ export default function HeartViewer({
           />
         );
       })}
+      <LabelProjector elements={labelElements} paths={ARTERY_PATHS} />
+    </>
+  );
+}
+
+/** The heart model with its own artery meshes. Labels hide where the heart covers an artery. */
+function ModelScene({ url, labelElements, ...model }: SceneProps & { url: string }) {
+  const heart = useRef<Mesh>(null);
+
+  return (
+    <>
+      <HeartModel url={url} heartRef={heart} {...model} />
+      <LabelProjector elements={labelElements} paths={MODEL_ARTERY_PATHS} occluder={heart} />
+    </>
+  );
+}
+
+export default function HeartViewer({ viewRequest, onModelError, ...scene }: HeartViewerProps) {
+  const standIn = <StandInScene {...scene} />;
+
+  return (
+    <Canvas
+      flat
+      frameloop="demand"
+      dpr={[1, 1.5]}
+      camera={{ position: START_POSITION, fov: 35, near: 0.5, far: 40 }}
+      onCreated={({ camera }) => camera.lookAt(TARGET)}
+    >
+      {/* A low ambient level and a strong key light, so the shape of the heart reads from every side. */}
+      <ambientLight intensity={1.0} />
+      <directionalLight position={[3, 5, 6]} intensity={2.1} />
+      <directionalLight position={[-5, 1, -4]} intensity={1.3} />
+
+      {HEART_MODEL_URL ? (
+        <ModelErrorBoundary fallback={standIn} onError={onModelError}>
+          {/* Nothing is drawn while the model loads: a different heart first would only flash. */}
+          <Suspense fallback={null}>
+            <ModelScene url={HEART_MODEL_URL} {...scene} />
+          </Suspense>
+        </ModelErrorBoundary>
+      ) : (
+        standIn
+      )}
 
       <OrbitControls makeDefault enablePan={false} minDistance={3.8} maxDistance={10} target={TARGET} />
-      <CameraRig request={viewRequest} reducedMotion={reducedMotion} />
-      <LabelProjector elements={labelElements} />
+      <CameraRig request={viewRequest} reducedMotion={scene.reducedMotion} />
     </Canvas>
   );
 }

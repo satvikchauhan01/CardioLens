@@ -13,9 +13,11 @@ export interface VesselConfig {
 }
 
 export const VESSELS: readonly VesselConfig[] = [
+  // The views follow the heart model: the LCX trunk comes into sight on the back, and most of the
+  // RCA lies along the right border as seen from the front.
   { id: "lad", objectName: "artery-lad", preferredView: "front" },
-  { id: "lcx", objectName: "artery-lcx", preferredView: "left" },
-  { id: "rca", objectName: "artery-rca", preferredView: "right" },
+  { id: "lcx", objectName: "artery-lcx", preferredView: "back" },
+  { id: "rca", objectName: "artery-rca", preferredView: "front" },
 ];
 
 export function isVesselId(id: string): id is VesselId {
@@ -23,8 +25,8 @@ export function isVesselId(id: string): id is VesselId {
 }
 
 /**
- * URL of the optimized heart mesh, or null while there is none. With null the viewer draws the
- * stand-in heart directly. Set it to "/models/heart.glb" once the asset is in public/models/ and
- * the artery paths have been re-authored on it (BUILD_MAP T6.1, T6.2).
+ * URL of the heart model, built by tools/heart_model/build_heart.py. It holds the heart and one
+ * mesh per vessel, named by `objectName` above. With null, or when the file cannot be used, the
+ * viewer draws the stand-in heart instead (F11).
  */
-export const HEART_MODEL_URL: string | null = null;
+export const HEART_MODEL_URL: string | null = "/models/heart.glb";
