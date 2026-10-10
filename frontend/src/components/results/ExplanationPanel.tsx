@@ -12,7 +12,7 @@ import { featureById, useMeta } from "../../state/MetaContext";
 import { BUTTON_CLASS } from "../common/Feedback";
 import { ContributionBar } from "./ContributionBar";
 
-export const TOP_CONTRIBUTIONS = 8;
+const TOP_CONTRIBUTIONS = 8;
 
 interface ExplanationPanelProps {
   target: TargetInfo;

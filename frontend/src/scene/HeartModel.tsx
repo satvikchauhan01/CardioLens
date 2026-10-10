@@ -8,6 +8,7 @@ import type { Mesh } from "three";
 import { NO_ESTIMATE_COLOR } from "../config/risk";
 import { VESSELS, type VesselId } from "../config/vessels";
 import { ModelArtery, NOT_PICKABLE, type ArteryPointer } from "./Artery";
+import { HEART_COLOR } from "./colors";
 import { MODEL_ARTERY_PATHS } from "./heartModelData";
 import {
   BRANCHES_OBJECT,
@@ -16,7 +17,7 @@ import {
   LEFT_MAIN_OBJECT,
   readHeartModel,
 } from "./modelGeometry";
-import { HEART_COLOR, heartPointerHandlers } from "./ProxyHeart";
+import { heartPointerHandlers } from "./ProxyHeart";
 
 interface HeartModelProps {
   url: string;

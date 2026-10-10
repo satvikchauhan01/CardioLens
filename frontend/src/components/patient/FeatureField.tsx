@@ -17,7 +17,7 @@ interface FeatureFieldProps {
 const INPUT_CLASS =
   "w-full rounded-md border bg-surface px-2 py-1.5 text-sm text-ink focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-brand";
 
-export const fieldId = (feature: FeatureSchema, prefix = "field") => `${prefix}-${feature.id}`;
+const fieldId = (feature: FeatureSchema, prefix = "field") => `${prefix}-${feature.id}`;
 
 function FieldError({ id, error }: { id: string; error?: string }) {
   if (!error) return null;

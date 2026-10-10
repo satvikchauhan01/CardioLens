@@ -1,6 +1,6 @@
 # Demo Flow
 
-**Status:** v0.2 — v0.1 approved by Satvik (T0.2); the steps that waited for real models were filled in at T9.3 and are for Satvik's review · **Date:** 2026-10-07
+**Status:** v0.3 — v0.1 approved by Satvik (T0.2); the steps that waited for real models were filled in at T9.3, and a narration draft for the video was added at T11.3 (§3.1); both are for Satvik's review · **Date:** 2026-10-08
 
 > Judges receive the Devpost submission (repo + video), so the **YouTube video** (§3) is the primary demo. The live script (§2) is for any live session or Q&A during judging (Oct 15–20).
 > The steps that depend on the trained models were filled in on 2026-10-07 from the running app (model version `20261007T1423Z-7393432`), never guessed. If the models are retrained, check these numbers again.
@@ -50,6 +50,39 @@ Requirements (SG 3, PS): shows the project **running**, explains the approach, c
 | 7. Technical implementation | 1:30 | Architecture diagram (ARCHITECTURE §1); leakage guard; repeated CV and model selection; SHAP grouping of one-hot features; one target-id key across API and 3D; 3D performance choices |
 | 8. Results | 0:30 | Real metrics table from the Model & method tab — no rounding up, no cherry-picking. Say both sides: CAD ROC-AUC 0.917 ± 0.033; the vessel models are weaker, LCX 0.739 ± 0.056 and RCA 0.725 ± 0.045 |
 | 9. Limitations and close | 0:20 | PRODUCT_SPEC §9.4 in brief; thank you |
+
+### 3.1 Narration draft (T11.3)
+
+A draft for Satvik to put into his own words; about 800 words, close to six minutes at a calm pace. Every number is from the running app or from `backend/artifacts/metrics.json` (model version above). Record at 100% zoom in a window at least 1280 px wide, after one dry run with the console open.
+
+**1. Hook and problem** (app open on Sample A)
+"A model that says 'ninety-nine percent risk of coronary artery disease' leaves out two things a reader needs: which artery is the model concerned about, and why. This is CardioLens, my project for Track A. One thing first, and it stays on screen the whole time: this is an educational and decision-support prototype. It is not a diagnosis."
+
+**2. What it does** (move the pointer across the three columns)
+"On the left is one patient's routine clinical data. On the right are four model estimates: coronary artery disease overall, and a narrowing of fifty percent or more in the LAD, the LCX and the RCA. In the middle is a 3D heart, and each of those three arteries takes the colour of its own estimate."
+
+**3. Input workflow** (click Sample C, then "Start from typical values"; change Age; type 200 into Age; correct it)
+"Six sample patients are built in. They were set aside before training, so the models have never seen them. I can also start from typical values and enter a patient by hand: fifty-four inputs, in five groups, from demographics to echo findings. Every change is checked first. An age of 200 is outside the range seen in the dataset, so the field says so and no estimate is requested. With a valid value the estimates update in about half a second."
+
+**4. 3D interactions** (Reset demo; drag, scroll, hover the LAD; click the LCX row; read the legend)
+"I can rotate and zoom the heart. Hovering an artery shows its name and estimate, and a click selects it. The circumflex artery runs behind the heart, so choosing LCX in the list turns the heart to the back. The legend says what the colour means: the estimated probability for that artery. It does not show where along the artery a narrowing might be. The dataset has no such information, so the app does not pretend to."
+
+**5. Explanations** (LCX selected; scroll the explanation; "Show all")
+"Selecting a vessel opens that vessel's explanation. These are SHAP contributions: which inputs pushed this estimate up or down, with the patient's value, its unit and where it lies among the training patients. For this patient's LCX the largest factor is creatinine: 1.5 milligrams per decilitre, the ninety-sixth percentile. The sentence on top is filled from a template, not written by a language model."
+
+**6. What-if and dataset labels** (Reset demo; switch Typical chest pain off; Reset to original; tick "Show dataset angiography result"; load Sample D)
+"The quick controls hold the eight inputs that matter most to the four models. If I switch typical chest pain off, everything updates together. The RCA estimate goes from 52 to 37 percent, and its status changes to 'stenosis not predicted'. This is how the model responds to a changed input. It is not the effect of a treatment. Now the angiography labels from the dataset. For Sample A all four predictions match. For Sample D the model predicts a narrowing in the LAD, at 79 percent, and in the RCA, at 92 percent, and the dataset says both are normal. The app shows its misses as plainly as its hits."
+
+**7. Technical implementation** (Model & method tab, method box; then the architecture diagram of ARCHITECTURE §1 or the report's page 5)
+"How it is built. The dataset is the Z-Alizadeh Sani dataset from the UCI repository: 303 patients. There are four separate models, one per target. The four angiography columns are never inputs to any model; the code refuses to train if one appears, and tests check it. For each target I compare logistic regression, a random forest and gradient boosting against a baseline, with repeated stratified five-fold cross-validation, 25 folds, and the preprocessing refitted inside every fold. Nothing is tuned, because with 297 training rows a search would mostly fit noise. A FastAPI service loads the models once and returns four probabilities and four explanations per request. The same four ids, cad, lad, lcx and rca, run through the training code, the API and the names of the 3D objects, and that keeps each estimate on the right artery. The heart is built from 44 BodyParts3D anatomy parts into one file of 0.65 megabytes. It draws a frame in about one millisecond on this laptop's integrated graphics."
+
+**8. Results** (Model & method tab, the two tables, then the plots)
+"The results, as measured. The overall model reaches a ROC-AUC of 0.917, plus or minus 0.033. The vessel models are weaker: 0.855 for the LAD, 0.739 for the LCX and 0.725 for the RCA, against 0.5 for the baseline. At the 0.5 threshold the LCX model finds only 40 percent of the stenotic vessels, and the RCA model 53 percent. Routine findings say much more about whether a patient has coronary disease than about which artery is affected. This page shows every candidate, the baseline and the calibration plots."
+
+**9. Limitations and close** (scroll to Limitations; back to Patient analysis)
+"The limits: 303 patients from one dataset, recorded findings and not raw ECG or imaging, and estimates per artery with no location inside it. CardioLens is for education and decision support. The code, the trained models and a five-page report are in the repository. Thank you."
+
+Before recording: the heart model's full credit and licence must be in the app's footer and credits, because both are on screen in this video.
 
 ## 4. Manual end-to-end checklist (T9.3 and before recording)
 

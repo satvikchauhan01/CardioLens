@@ -7,6 +7,7 @@ import { useEffect, useMemo, type ReactNode } from "react";
 import { BackSide, CatmullRomCurve3, TubeGeometry, Vector3, type BufferGeometry, type MeshStandardMaterial } from "three";
 import type { VesselId } from "../config/vessels";
 import type { ArteryPath } from "./arteryPaths";
+import { SELECTED_OUTLINE_COLOR } from "./colors";
 import { inflated } from "./modelGeometry";
 import { useRiskMaterial } from "./useRiskMaterial";
 
@@ -17,7 +18,6 @@ const RADIAL_SEGMENTS = 12;
 const EMPHASIS = 1.5; // while hovered or selected
 const RIM = 2.0; // the selected artery's dark rim
 const HIT = 2.6; // the invisible shell that takes the pointer
-const RIM_COLOR = "#0f172a";
 // For meshes that are only drawn. The pointer goes to the shell, and a mesh that cannot be hit
 // is also left out when the heart model builds its bounding-volume trees.
 export const NOT_PICKABLE = () => null;
@@ -79,7 +79,7 @@ function ArteryBody({
       {children?.(material, emphasized)}
       {selected && (
         <mesh geometry={shapes.rim} raycast={NOT_PICKABLE}>
-          <meshBasicMaterial color={RIM_COLOR} side={BackSide} />
+          <meshBasicMaterial color={SELECTED_OUTLINE_COLOR} side={BackSide} />
         </mesh>
       )}
       {id && (

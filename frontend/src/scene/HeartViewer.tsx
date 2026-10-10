@@ -10,12 +10,13 @@ import { NO_ESTIMATE_COLOR } from "../config/risk";
 import { HEART_MODEL_URL, VESSELS, type VesselId } from "../config/vessels";
 import { Artery, type ArteryPointer } from "./Artery";
 import { ARTERY_PATHS, arteryPath } from "./arteryPaths";
+import { NEUTRAL_VESSEL_COLOR } from "./colors";
 import { HeartModel, preloadHeartModel } from "./HeartModel";
 import { MODEL_ARTERY_PATHS } from "./heartModelData";
 import type { LabelElements } from "./labelAnchors";
 import { LabelProjector } from "./LabelProjector";
 import { ModelErrorBoundary } from "./ModelErrorBoundary";
-import { NEUTRAL_VESSEL_COLOR, ProxyHeart } from "./ProxyHeart";
+import { ProxyHeart } from "./ProxyHeart";
 import {
   CAMERA_DISTANCE,
   CAMERA_TARGET,

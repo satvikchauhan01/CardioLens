@@ -5,7 +5,7 @@ import { useFrame, useThree } from "@react-three/fiber";
 import { useEffect, useMemo, useRef } from "react";
 import { Color, MeshStandardMaterial } from "three";
 
-export const COLOR_TRANSITION_SECONDS = 0.4;
+const COLOR_TRANSITION_SECONDS = 0.4;
 
 export function useRiskMaterial(color: string, reducedMotion: boolean): MeshStandardMaterial {
   const invalidate = useThree((state) => state.invalidate);

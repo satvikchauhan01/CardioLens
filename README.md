@@ -6,6 +6,10 @@
 
 Multimodal AI Hackathon 2026 — Track A: Cardiovascular Risk Visualization & Prediction.
 
+![CardioLens with a sample patient: the input panel, the 3D heart with its coloured coronary arteries, and the model estimates](docs/images/app_overview.jpg)
+
+**Project report:** [`docs/CardioLens_Report.pdf`](docs/CardioLens_Report.pdf) (5 pages: data, models, results, interpretability, 3D pipeline, usage). The same text is in [`docs/REPORT.md`](docs/REPORT.md).
+
 ## What it is
 
 CardioLens is a web app for educational decision support. From a patient's routine clinical data it:
@@ -124,6 +128,16 @@ macOS / Linux: `backend/.venv/bin/python tools/heart_model/build_heart.py --sour
 
 The script selects the outside of the heart and the coronary arteries, places them in the viewer's axes and scale, traces the centre line of each artery, and writes the model together with `frontend/src/scene/heartModelData.ts`. Its last step runs glTF-Transform 4.5.1 through `npx` (downloaded on first use) to weld, simplify and compress the model. A rebuild from the same parts gives the same two files, byte for byte. The frontend tests load the model file and fail if it and the data file do not match.
 
+## Rebuild the report
+
+The PDF is already in `docs/`, so this step is only needed after `docs/REPORT.md` changes. It uses Microsoft Edge or Google Chrome, which must already be installed, and installs nothing. Run it from the repository root.
+
+```powershell
+backend\.venv\Scripts\python.exe tools\report\build_report.py
+```
+
+The script prints the Markdown file to `docs/CardioLens_Report.pdf` and fails if the result is longer than six pages. To retake the screenshots as well, start the app, run `node tools/report/capture_figures.mjs <folder>`, and add `--captures <folder>` to the command above.
+
 ## Tests
 
 Backend, in `backend` with the environment activated:
@@ -146,8 +160,9 @@ The backend suite takes about a minute: besides the unit and API tests it trains
 ```text
 CardioLens/
 ├── README.md
-├── docs/                # specification: problem analysis, product spec, architecture, API, data model, build map
+├── docs/                # project report (REPORT.md, PDF, images) and the specification
 ├── tools/heart_model/   # builds the 3D heart model from the source anatomy parts
+├── tools/report/        # takes the report's screenshots and builds its PDF
 ├── backend/
 │   ├── requirements.txt # pinned versions
 │   ├── data/raw/        # dataset .xlsx
@@ -243,4 +258,4 @@ CardioLens is an educational and decision-support prototype built for a hackatho
 
 ## Documentation
 
-The full specification is in [`docs/`](docs/): [problem analysis](docs/PROBLEM_ANALYSIS.md) · [product spec](docs/PRODUCT_SPEC.md) · [architecture](docs/ARCHITECTURE.md) · [API contract](docs/API_CONTRACT.md) · [data model](docs/DATA_MODEL.md) · [build map](docs/BUILD_MAP.md) · [demo flow](docs/DEMO_FLOW.md)
+The [project report](docs/CardioLens_Report.pdf) is the short version. The full specification is in [`docs/`](docs/): [problem analysis](docs/PROBLEM_ANALYSIS.md) · [product spec](docs/PRODUCT_SPEC.md) · [architecture](docs/ARCHITECTURE.md) · [API contract](docs/API_CONTRACT.md) · [data model](docs/DATA_MODEL.md) · [build map](docs/BUILD_MAP.md) · [demo flow](docs/DEMO_FLOW.md)

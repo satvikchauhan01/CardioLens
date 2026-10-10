@@ -6,13 +6,18 @@ import type { KeyboardEvent } from "react";
 import { NO_ESTIMATE_COLOR } from "../config/risk";
 import { VESSELS, type VesselId } from "../config/vessels";
 import { ARTERY_PATHS, arteryPath } from "./arteryPaths";
+import {
+  HEART_COLOR,
+  HEART_OUTLINE_COLOR,
+  HOVERED_OUTLINE_COLOR,
+  NEUTRAL_VESSEL_COLOR,
+  SELECTED_OUTLINE_COLOR,
+} from "./colors";
 import { frontOutline, isAnterior, type Vec3 } from "./heartShape";
 
 const SCALE = 100;
 const VIEW_BOX = "-185 -150 370 300"; // room on both sides for the labels
 const STROKE = 9;
-const HEART_FILL = "#e9e4df";
-const LEFT_MAIN_COLOR = "#64748b";
 
 const project = ([x, y]: Vec3 | [number, number]) => `${(x * SCALE).toFixed(1)},${(-y * SCALE).toFixed(1)}`;
 
@@ -71,13 +76,13 @@ export function VesselSchematic2D({
       <polygon
         data-part="heart"
         points={frontOutline().map(project).join(" ")}
-        fill={HEART_FILL}
-        stroke="#cfc8c1"
+        fill={HEART_COLOR}
+        stroke={HEART_OUTLINE_COLOR}
         strokeWidth={1.5}
         onClick={onSelectHeart}
       />
       {leftMain && (
-        <path d={line(leftMain.points)} fill="none" stroke={LEFT_MAIN_COLOR} strokeWidth={STROKE} strokeLinecap="round" />
+        <path d={line(leftMain.points)} fill="none" stroke={NEUTRAL_VESSEL_COLOR} strokeWidth={STROKE} strokeLinecap="round" />
       )}
       {VESSELS.map((config) => {
         const path = ARTERY_PATHS.find((candidate) => candidate.id === config.id);
@@ -113,7 +118,7 @@ export function VesselSchematic2D({
               <path
                 d={line(path.points)}
                 fill="none"
-                stroke={selected ? "#0f172a" : "#0369a1"}
+                stroke={selected ? SELECTED_OUTLINE_COLOR : HOVERED_OUTLINE_COLOR}
                 strokeWidth={STROKE + 5}
                 strokeLinecap="round"
                 strokeLinejoin="round"

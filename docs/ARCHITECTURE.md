@@ -143,8 +143,9 @@ Read `manifest.json` → check installed library versions → load 4 bundles →
 CardioLens/
 ├── CLAUDE_RULES.md
 ├── README.md
-├── docs/                                   # this specification
+├── docs/                                   # this specification; REPORT.md, CardioLens_Report.pdf and images/ (project report); SUBMISSION.md
 ├── tools/heart_model/build_heart.py        # builds the heart model and its data file from the source anatomy parts
+├── tools/report/                           # capture_figures.mjs (screenshots of the running app), build_report.py (REPORT.md → PDF)
 ├── backend/
 │   ├── requirements.txt                    # pinned versions
 │   ├── requirements-dev.txt                # pytest, httpx
@@ -181,7 +182,7 @@ CardioLens/
         ├── components/ layout/, patient/, results/, evaluation/, common/
         └── scene/      ViewerPanel.tsx (DOM container) · HeartViewer.tsx (lazy WebGL scene),
                         HeartModel.tsx, modelGeometry.ts, heartModelData.ts (generated),
-                        Artery.tsx, useRiskMaterial.ts, LabelProjector.tsx, labelAnchors.ts,
+                        Artery.tsx, useRiskMaterial.ts, colors.ts, LabelProjector.tsx, labelAnchors.ts,
                         ProxyHeart.tsx, heartShape.ts, arteryPaths.ts (stand-in heart and its paths),
                         ModelErrorBoundary.tsx, ViewPresets.tsx, Legend.tsx, VesselSchematic2D.tsx
 ```

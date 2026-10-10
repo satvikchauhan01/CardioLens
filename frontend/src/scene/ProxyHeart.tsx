@@ -4,12 +4,9 @@
 import type { ThreeEvent } from "@react-three/fiber";
 import { useEffect, useMemo } from "react";
 import { BufferAttribute, BufferGeometry, CatmullRomCurve3, DoubleSide, TubeGeometry, Vector3 } from "three";
+import { GREAT_VESSEL_COLOR, HEART_COLOR } from "./colors";
 import { buildHeartMesh, GREAT_VESSELS } from "./heartShape";
 
-export const HEART_COLOR = "#e9e4df";
-// Vessels the models do not estimate: the left main stem and, on the heart model, the branches.
-export const NEUTRAL_VESSEL_COLOR = "#64748b";
-const GREAT_VESSEL_COLOR = "#dad4ce";
 const CLICK_TOLERANCE_PX = 5;
 
 /** Handlers for any heart mesh: it hides what is behind it, and a click on it selects CAD. */
