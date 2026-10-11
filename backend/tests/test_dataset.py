@@ -251,3 +251,24 @@ def test_reference_values_are_sorted_training_values(schema, reference_values, t
     for values in reference_values.values():
         assert len(values) == len(train_rows)
         assert values == sorted(values)
+
+
+def test_relations_between_inputs_that_the_app_points_out(dataset, schema):
+    """The facts behind the app's notes on unusual combinations (frontend/src/state/coherence.ts)."""
+    inputs = dataset.features
+
+    # Body mass index is weight / height squared, in every row.
+    from_size = inputs["weight"] / (inputs["length"] / 100) ** 2
+    assert (inputs["bmi"] - from_size).abs().max() < 1e-9
+    # Obesity is recorded as yes when the body mass index is above 25: all rows but one.
+    assert int((inputs["obesity"] == (inputs["bmi"] > 25)).sum()) == len(inputs) - 1
+    # A patient has at most one type of chest pain, and is never both a current and an ex-smoker.
+    pain_types = inputs[["typical_chest_pain", "atypical", "nonanginal"]].sum(axis=1)
+    assert set(pain_types) == {0, 1}
+    assert not (inputs["current_smoker"] & inputs["ex_smoker"]).any()
+
+    # The typical values are per-input medians, not one patient: their BMI is close to, not equal
+    # to, what their weight and height give. The app's tolerance must cover that difference.
+    typical = {entry["id"]: entry["default"] for entry in schema}
+    difference = abs(typical["bmi"] - typical["weight"] / (typical["length"] / 100) ** 2)
+    assert 0 < difference < 0.5

@@ -11,7 +11,7 @@ import pytest
 from fastapi.testclient import TestClient
 
 from app.main import create_app
-from app.predictor import AGREEMENT_INTRO, agreement, risk_level
+from app.predictor import AGREEMENT_INTRO, _rounded, agreement, risk_level
 from app.settings import DEFAULT_ARTIFACTS_DIR, MAX_BODY_BYTES, Settings
 from ml.config import (
     ARTIFACTS_DIR,
@@ -23,8 +23,9 @@ from ml.config import (
     TARGETS,
     VESSEL_IDS,
 )
+from ml.explain import direction
 
-JSON = {"Content-Type": "application/json"}
+JSON ={"Content-Type": "application/json"}
 # Loggers of the application and of the server stack it runs on.
 SERVER_LOGGERS = {"root", "app", "ml", "fastapi", "starlette", "uvicorn"}
 
@@ -231,7 +232,31 @@ def test_each_sample_predicts(client, samples, meta, index):
         for item in contributions:
             assert item["value"] == samples[index]["features"][item["feature"]]
             assert (item["percentile"] is not None) == (item["feature"] in numeric)
+            # The three numbers of a contribution agree with each other as they are sent.
+            assert item["direction"] == direction(item["shap"])
+            assert item["relative"] == 0 or (item["relative"] > 0) == (item["shap"] > 0)
+            assert "-0.0" not in (repr(item["shap"]), repr(item["relative"]))
         assert explanation["summary"].startswith("Factor")
+
+
+def test_a_contribution_that_rounds_to_nothing_is_neutral():
+    explanation = {
+        "base_value": 0.4,
+        "output_value": 0.61,
+        "contributions": [
+            {"feature": "a", "shap": 0.21, "relative": 0.9999, "direction": "raises"},
+            {"feature": "b", "shap": -0.00002, "relative": -0.00009, "direction": "lowers"},
+            {"feature": "c", "shap": 3e-9, "relative": 1e-8, "direction": "raises"},
+            {"feature": "d", "shap": -3e-9, "relative": -1e-8, "direction": "lowers"},
+        ],
+    }
+    sent = {item["feature"]: item for item in _rounded(explanation)["contributions"]}
+
+    assert (sent["a"]["shap"], sent["a"]["direction"]) == (0.21, "raises")
+    assert (sent["b"]["shap"], sent["b"]["relative"], sent["b"]["direction"]) == (-0.00002, -0.0001, "lowers")
+    for name in ("c", "d"):
+        assert sent[name]["direction"] == "neutral"
+        assert repr(sent[name]["shap"]) == repr(sent[name]["relative"]) == "0.0"
 
 
 def test_probabilities_come_from_the_saved_models(client, samples):

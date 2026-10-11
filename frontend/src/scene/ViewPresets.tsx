@@ -14,7 +14,10 @@ export interface ViewRequest {
 /** Camera placement around the heart: `azimuth` turns about the vertical axis from the front
  *  towards the patient's left, `polar` is measured from straight above. Degrees. */
 export const VIEWS: Record<ViewId, { azimuth: number; polar: number }> = {
-  reset: { azimuth: 22, polar: 80 },
+  // The starting view: turned far enough to the patient's left that all three arteries show (the
+  // RCA and the LAD with their labels, the LCX by its marginal branch), and no further, because
+  // the RCA's label goes out of sight a little beyond this.
+  reset: { azimuth: 35, polar: 78 },
   front: { azimuth: 0, polar: 86 },
   back: { azimuth: 180, polar: 86 },
   left: { azimuth: 90, polar: 86 },

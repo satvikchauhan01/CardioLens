@@ -1,6 +1,6 @@
 import { act, renderHook } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi, type MockInstance } from "vitest";
-import { isWebGLAvailable, usePrefersReducedMotion } from "./environment";
+import { isWebGLAvailable, isWindows, usePrefersReducedMotion } from "./environment";
 
 // The test setup already answers "no context" for every canvas; each test here sets its own answer.
 // getContext is overloaded per context type, so the spy is typed by the one shape used here.
@@ -42,6 +42,15 @@ describe("WebGL detection (F11)", () => {
     });
 
     expect(isWebGLAvailable()).toBe(false);
+  });
+});
+
+describe("operating system", () => {
+  it("tells Windows from the others by the browser's user agent", () => {
+    expect(isWindows("Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/141.0 Safari/537.36")).toBe(true);
+    expect(isWindows("Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 Chrome/141.0 Safari/537.36")).toBe(false);
+    expect(isWindows("Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 Chrome/141.0 Safari/537.36")).toBe(false);
+    expect(isWindows("Mozilla/5.0 (X11; Ubuntu; Linux x86_64; rv:143.0) Gecko/20100101 Firefox/143.0")).toBe(false);
   });
 });
 

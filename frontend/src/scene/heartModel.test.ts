@@ -1,7 +1,7 @@
 // The heart model as it is shipped: public/models/heart.glb together with heartModelData.ts.
 // Both are written by tools/heart_model/build_heart.py; these tests fail if one is changed alone.
 
-import { Mesh, MeshBasicMaterial, Raycaster, Vector3, type BufferGeometry, type Object3D } from "three";
+import { Color, Mesh, MeshBasicMaterial, Raycaster, Vector3, type BufferGeometry, type Object3D } from "three";
 import { MeshoptDecoder } from "three/examples/jsm/libs/meshopt_decoder.module.js";
 import { GLTFLoader } from "three/examples/jsm/loaders/GLTFLoader.js";
 import { beforeAll, describe, expect, it } from "vitest";
@@ -9,13 +9,13 @@ import { HEART_MODEL_URL, VESSELS, type VesselId } from "../config/vessels";
 import { META } from "../test/fixtures";
 import { readProjectFile } from "../test/projectFile";
 import type { ArteryPath } from "./arteryPaths";
-import { MODEL_ARTERY_PATHS, MODEL_BOUNDS, MODEL_SOURCES, MODEL_UNITS_PER_MM } from "./heartModelData";
+import { HEART_REGION_COLORS } from "./colors";
+import { MODEL_ARTERY_PATHS, MODEL_BOUNDS, MODEL_HEART_REGIONS, MODEL_SOURCES, MODEL_UNITS_PER_MM } from "./heartModelData";
 import {
-  BRANCHES_OBJECT,
   HEART_OBJECT,
-  inflated,
   LEFT_MAIN_OBJECT,
   readHeartModel,
+  thickenedVessel,
   type HeartModelParts,
 } from "./modelGeometry";
 import { CAMERA_DISTANCE, CAMERA_TARGET } from "./ViewPresets";
@@ -42,6 +42,7 @@ const nearest = (point: Point, among: readonly Point[]) => Math.min(...among.map
 let fileBytes = 0;
 let scene: Object3D;
 let parts: HeartModelParts;
+const everyGeometry = () => [parts.heart, parts.leftMain, ...Object.values(parts.arteries), ...Object.values(parts.branches)];
 
 beforeAll(async () => {
   const file = await readProjectFile(`public${HEART_MODEL_URL}`);
@@ -61,31 +62,40 @@ describe("heart model file", () => {
     expect(fileBytes).toBeLessThan(MAX_FILE_BYTES);
   });
 
-  it("holds exactly the named parts the viewer draws, one per vessel of the registry (TC-3)", () => {
+  it("holds exactly the named parts the viewer draws: a trunk and its branches per vessel of the registry (TC-3)", () => {
     const names: string[] = [];
     scene.traverse((object) => {
       if ((object as Mesh).isMesh) names.push(object.userData.name as string);
     });
+    const vesselTargets = META.targets.filter((target) => target.kind === "vessel").map((target) => target.id);
 
     expect(names.sort()).toEqual(
-      [HEART_OBJECT, LEFT_MAIN_OBJECT, BRANCHES_OBJECT, ...VESSELS.map((vessel) => vessel.objectName)].sort(),
+      [
+        HEART_OBJECT,
+        LEFT_MAIN_OBJECT,
+        ...VESSELS.flatMap((vessel) => [vessel.objectName, vessel.branchesObjectName]),
+      ].sort(),
     );
-    expect(Object.keys(parts.arteries)).toEqual(
-      META.targets.filter((target) => target.kind === "vessel").map((target) => target.id),
-    );
+    expect(Object.keys(parts.arteries)).toEqual(vesselTargets);
+    expect(Object.keys(parts.branches)).toEqual(vesselTargets);
+    for (const vessel of VESSELS) {
+      expect(vessel.objectName).toBe(`artery-${vessel.id}`);
+      expect(vessel.branchesObjectName).toBe(`artery-${vessel.id}-branches`);
+    }
   });
 
   it("stays within the triangle budget", () => {
-    const all = [parts.heart, parts.leftMain, parts.branches, ...Object.values(parts.arteries)];
-    const total = all.reduce((sum, geometry) => sum + triangles(geometry), 0);
+    const total = everyGeometry().reduce((sum, geometry) => sum + triangles(geometry), 0);
 
     expect(total).toBeLessThan(MAX_TRIANGLES);
     expect(triangles(parts.heart)).toBeGreaterThan(20_000); // not simplified into a blob
-    for (const geometry of Object.values(parts.arteries)) expect(triangles(geometry)).toBeGreaterThan(500);
+    for (const geometry of [...Object.values(parts.arteries), ...Object.values(parts.branches)]) {
+      expect(triangles(geometry)).toBeGreaterThan(500);
+    }
   });
 
   it("is centred on the point the camera orbits and fits in the starting view", () => {
-    const all = [parts.heart, parts.leftMain, parts.branches, ...Object.values(parts.arteries)].flatMap(vertices);
+    const all = everyGeometry().flatMap(vertices);
     const low = [0, 1, 2].map((axis) => Math.min(...all.map((point) => point[axis])));
     const high = [0, 1, 2].map((axis) => Math.max(...all.map((point) => point[axis])));
 
@@ -98,6 +108,28 @@ describe("heart model file", () => {
     const halfView = CAMERA_DISTANCE * Math.tan((35 / 2) * (Math.PI / 180));
     const reach = Math.max(...all.map((point) => distance(point, CAMERA_TARGET)));
     expect(reach).toBeLessThan(halfView);
+  });
+
+  it("marks every vertex of the heart with one of its three regions, each in its place", () => {
+    const color = parts.heart.getAttribute("color");
+    const points = vertices(parts.heart);
+    const shade = (region: (typeof MODEL_HEART_REGIONS)[number]) => new Color(HEART_REGION_COLORS[region]);
+    const of = (region: (typeof MODEL_HEART_REGIONS)[number]) =>
+      points.filter((_, index) => Math.abs(color.getX(index) - shade(region).r) < 1e-6 && Math.abs(color.getZ(index) - shade(region).b) < 1e-6);
+    const meanHeight = (region: Point[]) => region.reduce((sum, point) => sum + point[1], 0) / region.length;
+
+    expect(MODEL_HEART_REGIONS).toEqual(["ventricle", "atrium", "great_vessel"]);
+    expect(color.count).toBe(points.length);
+    const [ventricles, atria, greatVessels] = MODEL_HEART_REGIONS.map(of);
+    // Every vertex has exactly one of the three colours, and every region is there.
+    expect(ventricles.length + atria.length + greatVessels.length).toBe(points.length);
+    for (const region of [ventricles, atria, greatVessels]) expect(region.length).toBeGreaterThan(2000);
+    // The ventricles are the lower part of the heart, the great vessels leave it at the top.
+    expect(meanHeight(ventricles)).toBeLessThan(meanHeight(atria));
+    expect(meanHeight(atria)).toBeLessThan(meanHeight(greatVessels));
+    // The apex is the heart's lowest point (an artery's tip reaches a little lower still).
+    expect(Math.min(...ventricles.map((point) => point[1]))).toBeLessThan(MODEL_BOUNDS.min[1] + 5 * MM);
+    expect(Math.max(...greatVessels.map((point) => point[1]))).toBeCloseTo(MODEL_BOUNDS.max[1], 2);
   });
 
   it("is anatomy at life proportions: a heart about 12 cm tall", () => {
@@ -116,7 +148,7 @@ describe("model arteries ↔ data file (TC-3)", () => {
     expect(MODEL_ARTERY_PATHS.filter((entry) => !entry.interactive).map((entry) => entry.id)).toEqual(["left_main"]);
   });
 
-  it("builds each coloured artery from the trunk of that artery and nothing else", () => {
+  it("builds each labelled trunk from the trunk of that artery and nothing else", () => {
     // FMA names, copied on purpose: the object the model colours must be the vessel the model predicts.
     expect(MODEL_SOURCES["artery-lad"]).toEqual([
       { fma: "FMA74912", name: "Trunk of anterior interventricular branch of left coronary artery", files: 3 },
@@ -132,16 +164,43 @@ describe("model arteries ↔ data file (TC-3)", () => {
     ]);
   });
 
-  it("keeps the trunks out of the grey branches and every vessel out of the heart", () => {
-    const trunkIds = ["artery-lad", "artery-lcx", "artery-rca", LEFT_MAIN_OBJECT].flatMap((name) =>
-      MODEL_SOURCES[name].map((source) => source.fma),
-    );
-    const branchIds = MODEL_SOURCES[BRANCHES_OBJECT].map((source) => source.fma);
+  it("gives each vessel the branches that its own anatomy names give it", () => {
+    // FMA ids and names, copied on purpose: a branch must take the colour of the artery it comes from.
+    const fma = (name: string) => MODEL_SOURCES[name].map((source) => source.fma);
+    const names = (name: string) => MODEL_SOURCES[name].map((source) => source.name);
+
+    expect(fma("artery-lad-branches")).toEqual(["FMA3860", "FMA3888", "FMA3890"]);
+    expect(names("artery-lad-branches").every((name) => /anterior (descending|interventricular) branch of left coronary artery/.test(name))).toBe(true);
+
+    expect(fma("artery-lcx-branches")).toEqual(["FMA3902", "FMA3914", "FMA79742"]);
+    expect(names("artery-lcx-branches")).toEqual([
+      "Left marginal artery",
+      "First posterior ventricular branch of circumflex coronary artery",
+      "Trunk of posterior interventricular branch of left coronary artery",
+    ]);
+
+    expect(fma("artery-rca-branches")).toEqual(["FMA3815", "FMA3818", "FMA3807", "FMA3823", "FMA3837", "FMA3829"]);
+    expect(names("artery-rca-branches").every((name) => name.endsWith("of right coronary artery"))).toBe(true);
+  });
+
+  it("uses every structure once, and keeps every vessel out of the heart", () => {
+    const vesselObjects = [LEFT_MAIN_OBJECT, ...VESSELS.flatMap((vessel) => [vessel.objectName, vessel.branchesObjectName])];
+    const ids = vesselObjects.flatMap((name) => MODEL_SOURCES[name].map((source) => source.fma));
     const heartNames = MODEL_SOURCES[HEART_OBJECT].map((source) => source.name);
 
-    expect(branchIds.filter((fma) => trunkIds.includes(fma))).toEqual([]);
-    expect(MODEL_SOURCES[BRANCHES_OBJECT].every((source) => /artery/i.test(source.name))).toBe(true);
+    expect(Object.keys(MODEL_SOURCES).sort()).toEqual([HEART_OBJECT, ...vesselObjects].sort());
+    expect(new Set(ids).size).toBe(ids.length);
     expect(heartNames.filter((name) => /artery|vein|sinus/i.test(name))).toEqual([]);
+  });
+
+  it.each(VESSELS)("the branches of the $id spring from its own trunk and from no other", (vessel) => {
+    const branch = vertices(parts.branches[vessel.id]);
+    const gap = (id: VesselId) => Math.min(...vertices(parts.arteries[id]).map((point) => nearest(point, branch)));
+
+    expect(gap(vessel.id)).toBeLessThan(1 * MM);
+    for (const other of VESSELS.filter((candidate) => candidate.id !== vessel.id)) {
+      expect(gap(other.id)).toBeGreaterThan(5 * MM);
+    }
   });
 
   it.each(VESSELS.map((vessel) => vessel.id))("the %s mesh lies along its centre line", (id) => {
@@ -224,9 +283,11 @@ describe("picking and labels on the heart model", () => {
   beforeAll(() => {
     heart = new Mesh(parts.heart, new MeshBasicMaterial());
     heart.name = "heart";
-    // The same pointer shells the viewer builds (Artery.tsx): thickened 1.4 times, then 2.6 times.
+    // The same pointer shells the viewer builds (Artery.tsx): the trunk thickened 1.4 times, then
+    // 2.6 times, and the branches by half as much.
     shells = VESSELS.map((vessel) => {
-      const shell = new Mesh(inflated(parts.arteries[vessel.id], path(vessel.id).radius * (1.4 * 2.6 - 1)), new MeshBasicMaterial());
+      const shape = thickenedVessel(parts.arteries[vessel.id], parts.branches[vessel.id], path(vessel.id).radius * (1.4 * 2.6 - 1), 0.5);
+      const shell = new Mesh(shape, new MeshBasicMaterial());
       shell.name = vessel.id;
       return shell;
     });

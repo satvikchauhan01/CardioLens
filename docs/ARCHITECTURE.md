@@ -143,12 +143,14 @@ Read `manifest.json` → check installed library versions → load 4 bundles →
 CardioLens/
 ├── CLAUDE_RULES.md
 ├── README.md
+├── docker-compose.yml                      # optional: both parts in containers (D-076)
 ├── docs/                                   # this specification; REPORT.md, CardioLens_Report.pdf and images/ (project report); SUBMISSION.md
 ├── tools/heart_model/build_heart.py        # builds the heart model and its data file from the source anatomy parts
 ├── tools/report/                           # capture_figures.mjs (screenshots of the running app), build_report.py (REPORT.md → PDF)
 ├── backend/
 │   ├── requirements.txt                    # pinned versions
 │   ├── requirements-dev.txt                # pytest, httpx
+│   ├── Dockerfile                          # optional container for the model service (D-076)
 │   ├── data/raw/                           # dataset .xlsx (provided by Satvik; CC BY 4.0)
 │   ├── ml/
 │   │   ├── config.py                       # paths, seed, targets, excluded columns, CV params, thresholds, FEATURE_METADATA
@@ -171,13 +173,14 @@ CardioLens/
 └── frontend/
     ├── index.html
     ├── package.json
-    ├── vite.config.ts                      # /api and /static proxy → http://localhost:8000
+    ├── vite.config.ts                      # /api and /static proxy → http://127.0.0.1:8000 (where uvicorn listens)
+    ├── Dockerfile, nginx.conf              # optional container: built app served by nginx, same proxy (D-076)
     ├── public/models/heart.glb             # heart + coronary arteries, built by tools/heart_model (D-061, D-062)
     └── src/
         ├── main.tsx, App.tsx
         ├── api/        client.ts, types.ts
         ├── config/     vessels.ts, risk.ts, copy.ts
-        ├── state/      analysisReducer.ts, useAnalysis.ts, useBoot.ts, validation.ts, MetaContext.ts
+        ├── state/      analysisReducer.ts, useAnalysis.ts, useBoot.ts, validation.ts, coherence.ts (BR-15), MetaContext.ts
         ├── utils/      format.ts, environment.ts
         ├── components/ layout/, patient/, results/, evaluation/, common/
         └── scene/      ViewerPanel.tsx (DOM container) · HeartViewer.tsx (lazy WebGL scene),
@@ -199,7 +202,7 @@ CardioLens/
 
 **Consistency tests.**
 - Backend: every target in `TARGETS` has a model bundle, metrics entry and plots.
-- Frontend: every `vessel` target from `/api/meta` has an entry in the vessel registry, a named mesh in `heart.glb`, a centre line in `heartModelData.ts` and a path in `arteryPaths.ts`, and vice versa. The tests load the real model file and also check that each artery mesh lies along its centre line and is built from the trunk of that artery only (fails the test suite on mismatch).
+- Frontend: every `vessel` target from `/api/meta` has an entry in the vessel registry, two named meshes in `heart.glb` (its trunk and its branches), a centre line in `heartModelData.ts` and a path in `arteryPaths.ts`, and vice versa. The tests load the real model file and also check that each trunk lies along its centre line and is built from the trunk of that artery only, that each vessel's branches are the structures its anatomy names give it, and that they touch its own trunk and no other (fails the test suite on mismatch). The build script makes the same contact check before it writes the model.
 
 **Adding a clinical feature:** add the column + metadata entry (DATA_MODEL §3) → retrain → the form, validation and explanations pick it up from the schema. No UI code change.
 **Adding a prediction model/target:** add to `TARGETS` (+ source column) → retrain → if it is a vessel, add a registry entry and a path.
@@ -215,13 +218,15 @@ CardioLens/
 - `frameloop="demand"`: render only on interaction or color transitions (`invalidate()` during tweens).
 - `dpr={[1, 1.5]}`; antialias on.
 - ≤ 3 lights (ambient + 2 directional); no shadows; no HDRI.
-- Heart GLB: welded, simplified and meshopt-compressed (decoder bundled), no textures; 0.65 MB and about 92k triangles in six objects (limits: 5 MB, 150k triangles; T6.1).
-- Arteries: the model's own meshes; a thicker copy for hover/selection, a rim and a pointer shell are made once per artery at load. Materials reused, only `color`/`emissive` change. (Stand-in heart: tubes of ~96 × 12 segments.)
+- Heart GLB: welded, simplified and meshopt-compressed (decoder bundled), no textures; 0.66 MB and about 92k triangles in eight objects (limits: 5 MB, 150k triangles; T6.1). Each vertex of the heart is marked with its region (ventricle, atrium, great vessel); the viewer turns the marks into vertex colours, so the heart stays one draw call.
+- Arteries: the model's own meshes. Each vessel's trunk and branches are joined into one geometry, so a vessel is one draw call; a thicker copy for hover/selection, an edge for each of the two and a pointer shell are made once per artery at load. An edge is a slightly wider copy drawn before the artery without writing depth, so it shows evenly around an artery that lies half sunk in the heart. Materials reused, only `color`/`emissive` change. (Stand-in heart: tubes of ~96 × 12 segments.)
 - Bounding-volume trees (drei `Bvh`, average split strategy) on the heart and the three pointer shells only, so picking and the label visibility checks do not walk every triangle. Building them takes about 25 ms at load.
 - No per-frame allocations in `useFrame`; colors interpolated with preallocated `THREE.Color`.
 - R3F disposes JSX-declared resources on unmount; anything created manually is disposed in effect cleanup.
 
 **Budgets verified in T10.1** (2026-10-08, AMD Ryzen 7 5800HS with integrated Radeon graphics): one frame of the turning heart is drawn in 1.1 ms (median) and 5.6 ms at most, against 16.7 ms for 60 FPS; 6 draw calls (limit 50); about 92k triangles (limit 150k); heart model 0.65 MB (limit 5 MB), ready about 46 ms after its download; predict 80 ms median and 85 ms at the 95th percentile from the browser (limit 300 ms); first estimates on screen about 0.13 s after opening the optimized build on localhost (limit 3 s). The frame rate seen on screen is still to be watched in Chrome by Satvik.
+
+**Measured again on 2026-10-10**, after each vessel's branches were given its colour (same laptop, Microsoft Edge 154 without a window, canvas 516 × 432): a frame takes 1.5 ms (median) and 3.6 ms at most over three runs of 240 frames, 2.0 ms (median) zoomed in; 5 draw calls, 6 with an artery selected; about 92k triangles; heart model 0.66 MB. On the optimized build, setting up the 3D heart after its download (preparing the model and drawing the first frame) is one task of about 0.1 s. With the heart's colours and the arteries' edges (D-080): 9 draw calls, about 123k triangles drawn, a frame in 1.7 ms (median) and 2.2 ms at the 95th percentile over nine runs of 240 frames.
 
 **After a lost graphics context** (driver reset, waking from sleep) the browser restores the context and the viewer asks for one new frame, because nothing else would draw one while frames are on demand.
 

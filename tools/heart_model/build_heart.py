@@ -37,51 +37,71 @@ GLTF_TRANSFORM = "@gltf-transform/cli@4.5.1"
 # --- what goes into the model ------------------------------------------------------------------
 # Every part is named by its FMA id and English name, exactly as in the source file names.
 
-# The three vessels the models predict: only the trunk of each artery takes the risk colour.
-# The object names are the target ids of the API (ARCHITECTURE §6, TC-3).
+# The three vessels the models predict. The trunk of each artery carries its label and its centre
+# line. The object names are the target ids of the API (ARCHITECTURE §6, TC-3).
 VESSELS = {
     "lad": [("FMA74912", "Trunk of anterior interventricular branch of left coronary artery")],
     "lcx": [("FMA74923", "Trunk of circumflex branch of left coronary artery")],
     "rca": [("FMA3802", "Trunk of right coronary artery")],
 }
+# The stem the LAD and the LCX share belongs to neither, so it stays in a neutral colour.
 LEFT_MAIN = [("FMA4685", "Stem of left coronary artery")]
-# Branches are drawn in a neutral colour: the dataset labels the three vessels, not their branches.
-BRANCHES = [
-    ("FMA3860", "Diagonal branch of anterior descending branch of left coronary artery"),
-    ("FMA3888", "Second left anterior branch of anterior interventricular branch of left coronary artery"),
-    ("FMA3890", "Third left anterior branch of anterior interventricular branch of left coronary artery"),
-    ("FMA3902", "Left marginal artery"),
-    ("FMA3914", "First posterior ventricular branch of circumflex coronary artery"),
-    ("FMA79742", "Trunk of posterior interventricular branch of left coronary artery"),
-    ("FMA3815", "First anterior ventricular branch of right coronary artery"),
-    ("FMA3818", "Marginal branch of right coronary artery"),
-    ("FMA3807", "Conus branch of right coronary artery"),
-    ("FMA3823", "Sinoatrial nodal branch of right coronary artery"),
-    ("FMA3837", "First posterior ventricular branch of right coronary artery"),
-    ("FMA3829", "Anterior atrial branch of right coronary artery"),
-]
-# The outside of the heart: chamber walls, auricles and the roots of the great arteries.
-HEART = [
-    # The folder holds this wall twice: whole (MM474) and cut into twelve segments that lie in the
-    # same place (their volumes add up to the whole). Only the whole one is used.
-    ("FMA84850", "Free wall of left ventricle", ("MM474",)),
-    ("FMA9345", "Septal wall of left ventricle"),
-    ("FMA49207", "Wall of inflow part of right ventricle"),
-    ("FMA49208", "Wall of outflow part of right ventricle"),
-    ("FMA49292", "Anterior wall proper of left atrium"),
-    ("FMA9306", "Lateral wall of left atrium"),
-    ("FMA9542", "Posterior wall of left atrium"),
-    ("FMA9562", "Superior wall of left atrium"),
-    ("FMA84095", "Septal wall of left atrium"),
-    ("FMA9547", "Wall of left auricle"),
-    ("FMA49285", "Anterior wall proper of right atrium"),
-    ("FMA49286", "Lateral wall proper of right atrium"),
-    ("FMA84094", "Septal wall of right atrium"),
-    ("FMA49299", "Wall of right auricle proper"),
-    ("FMA23733", "Ascending aorta proper"),
-    ("FMA15098", "Wall of bulb of aorta"),
-    ("FMA15086", "Pulmonary trunk proper"),
-]
+# The branches of each vessel take that vessel's colour. A branch is listed under the artery its
+# name gives, and the build checks that it also springs from that artery's trunk (BRANCH_GAP_MM).
+BRANCHES = {
+    "lad": [
+        ("FMA3860", "Diagonal branch of anterior descending branch of left coronary artery"),
+        ("FMA3888", "Second left anterior branch of anterior interventricular branch of left coronary artery"),
+        ("FMA3890", "Third left anterior branch of anterior interventricular branch of left coronary artery"),
+    ],
+    "lcx": [
+        ("FMA3902", "Left marginal artery"),
+        ("FMA3914", "First posterior ventricular branch of circumflex coronary artery"),
+        # On this anatomy the posterior interventricular branch continues the circumflex trunk.
+        ("FMA79742", "Trunk of posterior interventricular branch of left coronary artery"),
+    ],
+    "rca": [
+        ("FMA3815", "First anterior ventricular branch of right coronary artery"),
+        ("FMA3818", "Marginal branch of right coronary artery"),
+        ("FMA3807", "Conus branch of right coronary artery"),
+        ("FMA3823", "Sinoatrial nodal branch of right coronary artery"),
+        ("FMA3837", "First posterior ventricular branch of right coronary artery"),
+        ("FMA3829", "Anterior atrial branch of right coronary artery"),
+    ],
+}
+# The outside of the heart: chamber walls, auricles and the roots of the great arteries, in three
+# regions. The model marks each vertex with its region and the viewer gives each region its colour.
+HEART_REGIONS = {
+    "ventricle": [
+        # The folder holds this wall twice: whole (MM474) and cut into twelve segments that lie in
+        # the same place (their volumes add up to the whole). Only the whole one is used.
+        ("FMA84850", "Free wall of left ventricle", ("MM474",)),
+        ("FMA9345", "Septal wall of left ventricle"),
+        ("FMA49207", "Wall of inflow part of right ventricle"),
+        ("FMA49208", "Wall of outflow part of right ventricle"),
+    ],
+    "atrium": [
+        ("FMA49292", "Anterior wall proper of left atrium"),
+        ("FMA9306", "Lateral wall of left atrium"),
+        ("FMA9542", "Posterior wall of left atrium"),
+        ("FMA9562", "Superior wall of left atrium"),
+        ("FMA84095", "Septal wall of left atrium"),
+        ("FMA9547", "Wall of left auricle"),
+        ("FMA49285", "Anterior wall proper of right atrium"),
+        ("FMA49286", "Lateral wall proper of right atrium"),
+        ("FMA84094", "Septal wall of right atrium"),
+        ("FMA49299", "Wall of right auricle proper"),
+    ],
+    "great_vessel": [
+        ("FMA23733", "Ascending aorta proper"),
+        ("FMA15098", "Wall of bulb of aorta"),
+        ("FMA15086", "Pulmonary trunk proper"),
+    ],
+}
+HEART = [entry for entries in HEART_REGIONS.values() for entry in entries]
+# A region is written as a pure colour, one channel per region in the order above. The viewer reads
+# the strongest channel, so the mark survives the compression of the file.
+REGION_CODES = {region: tuple(float(index == channel) for channel in range(3)) for index, region in enumerate(HEART_REGIONS)}
 # Where each trunk begins: the part its first piece touches.
 ORIGIN = {
     "lad": ("FMA4685", "Stem of left coronary artery"),
@@ -97,6 +117,7 @@ MODEL_HEIGHT = 2.9  # viewer units from the lowest to the highest point of the m
 MODEL_CENTER = (0.05, 0.3, 0.0)  # = CAMERA_TARGET in ViewPresets.tsx, the point the camera orbits
 
 LINK_MM = 0.5  # pieces of one trunk closer than this are joined when tracing its centre line
+BRANCH_GAP_MM = 0.5  # a branch must come this close to the trunk of the artery it is listed under
 CENTERLINE_BIN_MM = 2.0
 CENTERLINE_STEP_MM = 3.0
 ANCHOR_FRACTIONS = tuple(round(0.06 + 0.08 * step, 2) for step in range(12))  # 0.06 to 0.94
@@ -265,6 +286,20 @@ def centre_line(pieces: list[Part], origin: list[Part]) -> tuple[np.ndarray, flo
     return resampled, float(np.median(radii))
 
 
+def check_branches(vessels: dict[str, list[Part]], branches: dict[str, list[Part]]) -> None:
+    """Every branch springs from the trunk of the artery it is listed under, and from no other."""
+    trunks = {target: cKDTree(np.concatenate([piece.vertices for piece in pieces])) for target, pieces in vessels.items()}
+    for target, pieces in branches.items():
+        for piece in pieces:
+            gap = {other: float(tree.query(piece.vertices)[0].min()) for other, tree in trunks.items()}
+            touching = [other for other, distance in gap.items() if distance <= BRANCH_GAP_MM]
+            if touching != [target]:
+                raise ValueError(
+                    f"{piece.fma} ({piece.name}) is listed under {target} but touches {touching or 'no trunk'}: "
+                    + ", ".join(f"{other} {distance:.1f} mm" for other, distance in gap.items())
+                )
+
+
 def point_at(line: np.ndarray, fraction: float) -> np.ndarray:
     travelled = np.concatenate([[0], np.cumsum(np.linalg.norm(np.diff(line, axis=0), axis=1))])
     return np.array([np.interp(fraction * travelled[-1], travelled, line[:, axis]) for axis in range(3)])
@@ -355,18 +390,23 @@ def write_glb(path: Path, meshes: list[dict]) -> None:
         positions = mesh["positions"].astype("<f4")
         normals = mesh["normals"].astype("<f4")
         indices = mesh["faces"].astype("<u4").reshape(-1)
-        position = add(positions, 34962, {
-            "componentType": 5126, "count": len(positions), "type": "VEC3",
-            "min": positions.min(axis=0).tolist(), "max": positions.max(axis=0).tolist(),
-        })
-        normal = add(normals, 34962, {"componentType": 5126, "count": len(normals), "type": "VEC3"})
+        attributes = {
+            "POSITION": add(positions, 34962, {
+                "componentType": 5126, "count": len(positions), "type": "VEC3",
+                "min": positions.min(axis=0).tolist(), "max": positions.max(axis=0).tolist(),
+            }),
+            "NORMAL": add(normals, 34962, {"componentType": 5126, "count": len(normals), "type": "VEC3"}),
+        }
+        if mesh.get("regions") is not None:  # the heart: one region code per vertex
+            codes = mesh["regions"].astype("<f4")
+            attributes["COLOR_0"] = add(codes, 34962, {"componentType": 5126, "count": len(codes), "type": "VEC3"})
         index = add(indices, 34963, {"componentType": 5125, "count": len(indices), "type": "SCALAR"})
         materials.append({
             "name": mesh["name"],
             "pbrMetallicRoughness": {"baseColorFactor": mesh["color"], "metallicFactor": 0, "roughnessFactor": 0.8},
         })
         gltf_meshes.append({
-            "primitives": [{"attributes": {"POSITION": position, "NORMAL": normal}, "indices": index, "material": len(materials) - 1}],
+            "primitives": [{"attributes": attributes, "indices": index, "material": len(materials) - 1}],
         })
         # Only the node carries the name: loaders keep names unique, and a mesh of the same name
         # would make them rename the node.
@@ -441,6 +481,9 @@ def write_data(path: Path, placement: Placement, bounds: tuple[np.ndarray, np.nd
         "/** Bounding box of the whole model. Its centre is the point the camera orbits. */",
         f"export const MODEL_BOUNDS = {{ min: {vector(bounds[0])}, max: {vector(bounds[1])} }} as const;",
         "",
+        "/** The regions of the heart mesh. Each vertex carries its region as a pure colour: red, green or blue, in this order. */",
+        f"export const MODEL_HEART_REGIONS = [{', '.join(json.dumps(region) for region in HEART_REGIONS)}] as const;",
+        "",
         "/** The anatomical structures behind each object of the model, by FMA id. */",
         "export const MODEL_SOURCES: Record<string, readonly { fma: string; name: string; files: number }[]> = {",
     ]
@@ -488,9 +531,10 @@ def build(source: Path, raw_out: Path, skip_compress: bool, simplify_ratio: floa
     heart = select(parts, HEART)
     vessels = {target: select(parts, wanted) for target, wanted in VESSELS.items()}
     left_main = select(parts, LEFT_MAIN)
-    branches = select(parts, BRANCHES)
-    everything = heart + left_main + branches + [piece for pieces in vessels.values() for piece in pieces]
-    placement = Placement(everything)
+    branches = {target: select(parts, wanted) for target, wanted in BRANCHES.items()}
+    check_branches(vessels, branches)
+    arteries_and_branches = [piece for group in (vessels, branches) for pieces in group.values() for piece in pieces]
+    placement = Placement(heart + left_main + arteries_and_branches)
 
     def mesh(name: str, pieces: list[Part], color: list[float], smooth: bool) -> dict:
         vertices, normals, faces = merge(pieces)
@@ -502,11 +546,19 @@ def build(source: Path, raw_out: Path, skip_compress: bool, simplify_ratio: floa
         }
 
     # Colours are placeholders: the viewer supplies its own materials.
-    meshes = [mesh("heart", heart, [0.91, 0.89, 0.87, 1], smooth=False)]
-    meshes.append(mesh("artery-branches", branches, [0.45, 0.5, 0.56, 1], smooth=True))
+    meshes = [mesh("heart", heart, [1, 1, 1, 1], smooth=False)]
+    # The heart is merged in the order of HEART, so its vertices can be marked region by region.
+    region_of = {entry[0]: region for region, entries in HEART_REGIONS.items() for entry in entries}
+    meshes[0]["regions"] = np.concatenate(
+        [np.tile(REGION_CODES[region_of[piece.fma]], (len(piece.vertices), 1)) for piece in heart]
+    )
+    regions = {region: sum(len(piece.vertices) for piece in heart if region_of[piece.fma] == region) for region in HEART_REGIONS}
+    print(f"  heart regions (vertices): {regions}")
     meshes.append(mesh("artery-left-main", left_main, [0.39, 0.45, 0.55, 1], smooth=True))
     for target, pieces in vessels.items():
         meshes.append(mesh(f"artery-{target}", pieces, [0.58, 0.64, 0.72, 1], smooth=True))
+    for target, pieces in branches.items():
+        meshes.append(mesh(f"artery-{target}-branches", pieces, [0.58, 0.64, 0.72, 1], smooth=True))
     write_glb(raw_out, meshes)
 
     heart_vertices, heart_normals, heart_faces = merge(heart)
@@ -534,9 +586,9 @@ def build(source: Path, raw_out: Path, skip_compress: bool, simplify_ratio: floa
     bounds = (every_point.min(axis=0), every_point.max(axis=0))
     sources = {
         "heart": describe(heart),
-        "artery-branches": describe(branches),
         "artery-left-main": describe(left_main),
         **{f"artery-{target}": describe(pieces) for target, pieces in vessels.items()},
+        **{f"artery-{target}-branches": describe(pieces) for target, pieces in branches.items()},
     }
     write_data(DATA_OUT, placement, bounds, arteries, sources)
 

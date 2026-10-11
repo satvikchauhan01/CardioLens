@@ -35,7 +35,7 @@ Browser (React, three.js)  ──  /api  ──►  FastAPI service  ──►  
 ## Prerequisites
 
 - Python 3.13
-- Node.js 22.12 or newer with npm (developed with Node 22.16)
+- Node.js 22 with npm, version 22.13 or newer (developed with Node 22.16). Node 24 is also inside the range the build and test tools declare; it was not tried
 - Git
 
 Developed and tested on Windows 11. The macOS / Linux commands below are the standard equivalents and have not been run on those systems.
@@ -95,12 +95,24 @@ Open http://localhost:5173. The dev server forwards `/api` and `/static` to the 
 
 To serve the optimized build instead, run `npm run build` and then `npm run preview` in `frontend`, and open http://localhost:4173.
 
+## Run with Docker instead
+
+With Docker installed, the app runs without Python or Node. From the repository root:
+
+```bash
+docker compose up --build
+```
+
+Open http://localhost:5173 when both containers are up. The first build downloads the base images and the packages, which takes a few minutes and about 1.2 GB of disk space. `http://localhost:5173/api/health` answers 200 once the models are loaded. Stop with Ctrl+C, or with `docker compose down`.
+
+The `backend` container runs the model service with the trained models from `backend/artifacts/`. The `web` container serves the built frontend with nginx and forwards `/api` and `/static` to the backend. Port 5173 must be free, so stop `npm run dev` first if it is running. Checked with Docker Engine 28.5 (Docker Desktop for Windows): the six sample patients get the same estimates as without Docker.
 ## Using the app
 
 The first sample patient loads by itself. Pick another sample or edit any input, and the estimates, the artery colours and the explanations update.
 
-- **3D heart.** Drag to rotate, scroll to zoom, and click an artery (or its row in the list) to see that vessel's explanation; a click on the heart selects the overall CAD estimate. The view buttons turn the heart to the front, back, left or right. The circumflex artery runs behind the heart, so its label appears from the back.
+- **3D heart.** The heart has the colours of a heart: rose muscle, mauve atria, pale great vessels. These carry no estimate. Each of the three arteries, with its branches, takes the colour of its own estimate and has a dark edge, so it stands out on the heart at every risk level. Drag to rotate, scroll to zoom, and click an artery or one of its branches (or its row in the list) to see that vessel's explanation; a click on the heart selects the overall CAD estimate. The view buttons turn the heart to the front, back, left or right. The trunk of the circumflex artery runs behind the heart, so its label appears from the back; from the front it shows by its marginal branch.
 - **What-if.** The quick controls hold the eight inputs that matter most to the four models on average. Change one and each estimate shows how it moved ("58% → 51%, −7 pp"); "Reset to original" brings the loaded patient back. This shows how the model responds to changed inputs, not the effect of any treatment.
+- **Unusual combinations.** Some inputs belong together in the dataset: body mass index is always weight ÷ height², obesity follows the body mass index, and no patient has two types of chest pain or is both a current and an ex-smoker. When an edit breaks one of these, a note under the patient picker says so. Nothing is blocked or changed; the note marks the estimates as going beyond the data the models were trained on.
 - **Dataset labels.** For an unmodified sample patient, "Show dataset angiography result" puts the dataset's label next to each estimate, with a mark for whether the model's prediction matches it. The six sample patients were never used for training or validation.
 - **Model & method.** The second tab shows how the models were validated: the method, the cross-validated metrics of every candidate and the baseline, the ROC, calibration and confusion plots, the most important inputs per target, the limitations and the credits.
 - **Reset demo** in the header returns to the first sample and the starting view.
@@ -126,7 +138,7 @@ backend\.venv\Scripts\python.exe tools\heart_model\build_heart.py --source "<fol
 
 macOS / Linux: `backend/.venv/bin/python tools/heart_model/build_heart.py --source "<folder with the .obj files>"`.
 
-The script selects the outside of the heart and the coronary arteries, places them in the viewer's axes and scale, traces the centre line of each artery, and writes the model together with `frontend/src/scene/heartModelData.ts`. Its last step runs glTF-Transform 4.5.1 through `npx` (downloaded on first use) to weld, simplify and compress the model. A rebuild from the same parts gives the same two files, byte for byte. The frontend tests load the model file and fail if it and the data file do not match.
+The script selects the outside of the heart and the coronary arteries, places them in the viewer's axes and scale, traces the centre line of each artery, checks that every branch springs from the trunk of the artery it is listed under, and writes the model together with `frontend/src/scene/heartModelData.ts`. Its last step runs glTF-Transform 4.5.1 through `npx` (downloaded on first use) to weld, simplify and compress the model. A rebuild from the same parts gives the same two files, byte for byte. The frontend tests load the model file and fail if it and the data file do not match.
 
 ## Rebuild the report
 
@@ -160,6 +172,7 @@ The backend suite takes about a minute: besides the unit and API tests it trains
 ```text
 CardioLens/
 ├── README.md
+├── docker-compose.yml   # optional: both parts in containers (backend/Dockerfile, frontend/Dockerfile)
 ├── docs/                # project report (REPORT.md, PDF, images) and the specification
 ├── tools/heart_model/   # builds the 3D heart model from the source anatomy parts
 ├── tools/report/        # takes the report's screenshots and builds its PDF
@@ -175,7 +188,7 @@ CardioLens/
     └── src/
         ├── api/         # the one place that talks to the backend
         ├── config/      # copy, risk colours, vessel registry
-        ├── state/       # boot, analysis state machine, input validation
+        ├── state/       # boot, analysis state machine, input validation, notes on unusual combinations
         ├── components/  # layout, patient input, results, evaluation tab
         └── scene/       # 3D viewer, heart model, arteries, labels, 2D fallback
 ```
@@ -201,18 +214,18 @@ Each prediction is explained with SHAP values (exact explainers for linear and t
 
 ## Performance
 
-Measured on 2026-10-08 on the development laptop: AMD Ryzen 7 5800HS with integrated Radeon graphics (no separate graphics card), 16 GB of memory, Windows 11, Chromium 152.
+Measured on the development laptop: AMD Ryzen 7 5800HS with integrated Radeon graphics (no separate graphics card), 16 GB of memory, Windows 11. The 3D rows were measured again on 2026-10-10, after the heart and the arteries' branches were given their colours, in Microsoft Edge 154; the other rows are from 2026-10-08 in Chromium 152.
 
 | What | Measured | Target |
 |---|---|---|
 | One prediction with four explanations, from the browser | median 80 ms, 95th percentile 85 ms (50 calls) | 95th percentile under 300 ms |
 | First estimates on screen after opening the page (optimized build) | about 0.13 s | under 3 s |
-| Drawing one frame of the 3D heart while it turns | median 1.1 ms, slowest 5.6 ms (240 frames); zoomed in: median 1.5 ms | 16.7 ms for 60 frames per second |
-| 3D scene | 6 draw calls, about 92,000 triangles, 3 lights, no textures or shadows | under 50 draw calls, under 150,000 triangles |
-| Preparing the heart model after its download | about 50 ms | — |
-| Downloads | page code 278 kB (87 kB compressed), 3D viewer code 1.03 MB (280 kB compressed, loaded after the page is usable), heart model 0.65 MB | heart model under 5 MB |
+| Drawing one frame of the 3D heart while it turns | median 1.7 ms, 95th percentile 2.2 ms (nine runs of 240 frames; the slowest frame took 16.5 ms once, 4.1 ms in the other eight runs); zoomed in: median 2.2 ms | 16.7 ms for 60 frames per second |
+| 3D scene | 9 draw calls, about 123,000 triangles drawn (the model's 92,000 and the arteries' edges), 3 lights, no textures or shadows | under 50 draw calls, under 150,000 triangles |
+| Setting up the 3D heart after its download (preparing the model and drawing the first frame, optimized build) | one task of about 0.1 s | — |
+| Downloads | page code 280 kB (88 kB compressed), 3D viewer code 1.03 MB (280 kB compressed, loaded after the page is usable), heart model 0.66 MB | heart model under 5 MB |
 
-The frame time is the time to draw a frame and wait for the graphics card to finish it, measured inside the page. The frame rate seen on screen was not measured, because the browser used for these measurements limits how often it redraws.
+The frame time is the time to draw a frame and wait for the graphics card to finish it, measured inside the page with the browser running without a window. The frame rate seen on screen was not measured.
 
 ## Configuration
 
@@ -230,6 +243,8 @@ The defaults need no configuration. Three settings exist for other setups:
 - **"Model service not ready: …"** The backend started but cannot use the files in `backend/artifacts/`; the message says why. Usually the installed scikit-learn differs from the pinned version: run `pip install -r requirements.txt` again, or retrain with `python -m ml.train`.
 - **PowerShell refuses to run `Activate.ps1`.** Skip the activation and call the environment's Python directly: `.\.venv\Scripts\python.exe -m uvicorn app.main:app --port 8000`, and likewise `.\.venv\Scripts\python.exe -m pytest`.
 - **"Port 5173 is already in use."** Another program, or an earlier `npm run dev`, holds the port. Close it; the frontend is set to use exactly this port.
+- **The backend stops with "address already in use" (port 8000).** Another program, or an earlier `uvicorn`, holds the port. Close it; the frontend forwards its requests to exactly this port.
+- **`http://127.0.0.1:5173` does not open.** Use `http://localhost:5173`: on some systems the dev server listens only on the address that `localhost` stands for.
 - **A flat drawing of the heart instead of the 3D model.** The browser could not start 3D graphics, so the app shows a 2D schematic with the same colours and the same selection. Hardware acceleration may be switched off in the browser's settings.
 - **"Detailed heart model unavailable."** `frontend/public/models/heart.glb` could not be loaded; the app draws a simpler stand-in heart and keeps working.
 
@@ -240,7 +255,7 @@ Dataset page: https://archive.ics.uci.edu/dataset/411/extention+of+z+alizadeh+sa
 
 **3D heart model.** The heart and the coronary arteries in `frontend/public/models/heart.glb` are built from BodyParts3D anatomy parts (one file per anatomical structure, named with its FMA id) by `tools/heart_model/build_heart.py`. **The full credit, source URL and licence of the model are still to be added here**, and in the app's footer and credits, before this repository is published with the model.
 
-The model is a reference anatomy, not a patient's heart. Only the trunks of the three vessels the models estimate (LAD, LCX, RCA) take the risk colour; the left main stem and the branches are drawn in grey. If the model file cannot be loaded, the app draws a stylised stand-in heart generated in code (`frontend/src/scene/heartShape.ts`) instead.
+The model is a reference anatomy, not a patient's heart. Its heart is drawn in three anatomical colours (ventricles, atria, great vessels), which carry no estimate and are chosen lighter than every colour of the risk scale. Each of the three vessels the models estimate (LAD, LCX, RCA) takes the risk colour on its trunk and on its twelve named branches in all (three, three and six); a branch belongs to the artery its anatomical name gives, and the build checks that it also springs from that artery's trunk. The left main stem, which the LAD and the LCX share, is drawn in grey. If the model file cannot be loaded, the app draws a stylised stand-in heart generated in code (`frontend/src/scene/heartShape.ts`) instead.
 
 **Libraries.** scikit-learn, SHAP, pandas, NumPy, FastAPI and Uvicorn in the backend; React, Vite, Tailwind CSS, three.js, React Three Fiber and drei in the frontend. Versions are pinned in `backend/requirements.txt` and `frontend/package.json`.
 

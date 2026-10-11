@@ -1,6 +1,6 @@
 # Product Specification
 
-**Status:** v0.1 — approved by Satvik (T0.2) · **Date:** 2026-10-07
+**Status:** v0.2 — v0.1 approved by Satvik (T0.2); BR-15, the coloured branches of F5 and the heart's own colours added on 2026-10-10 at his choice (D-073, D-075, D-080) · **Date:** 2026-10-10
 **Product:** CardioLens (working name, D-001)
 **Tagline:** "Coronary risk estimates, mapped to the vessels they describe."
 
@@ -32,9 +32,9 @@ CardioLens is a web app for **educational decision support**. A user loads a sam
 | F2 | Patient input form | Must | Generated from the feature schema, grouped by clinical category, validated |
 | F3 | Prediction engine | Must | Four models: `cad`, `lad`, `lcx`, `rca` |
 | F4 | Results panel | Must | CAD status, vessel probabilities, risk levels, agreement note |
-| F5 | 3D heart viewer | Must | Colored, selectable arteries; orbit/zoom; legend; view presets; labels |
+| F5 | 3D heart viewer | Must | Colored, selectable arteries (each trunk with its branches, D-073); orbit/zoom; legend; view presets; labels |
 | F6 | Explanation panel | Must | Per-target SHAP contributions with value, unit, dataset percentile, summary |
-| F7 | What-if explorer | DIFF-1 | Quick controls, live updates, before → after deltas, reset |
+| F7 | What-if explorer | DIFF-1 | Quick controls, live updates, before → after deltas, reset, note on unusual combinations (BR-15) |
 | F8 | Ground-truth reveal | DIFF-2 | Dataset angiography labels for unmodified held-out samples |
 | F9 | Model & method view | Must + DIFF-2 | CV metrics, plots, global importance, method, limitations, credits |
 | F10 | Safety & disclaimer | Must | Persistent banner, result captions, legend note |
@@ -117,7 +117,7 @@ Rules: each request gets an increasing id; responses with an older id are discar
 
 **BR-4 Risk level (display only).** Low: p < 0.35 · Moderate: 0.35 ≤ p < 0.65 · High: p ≥ 0.65. Caption wherever shown: "Model-estimated probability, not a clinical risk category."
 
-**BR-5 Color.** Continuous interpolation through three stops — teal (p = 0), amber (p = 0.5), crimson (p = 1) — with darkening luminance toward high risk. Always paired with the % value and level label. Neutral grey when there is no prediction. Exact color tokens live in `frontend/src/config/risk.ts` and are checked for color-blind distinguishability in T6.3.
+**BR-5 Color.** Continuous interpolation through three stops — teal (p = 0), amber (p = 0.5), crimson (p = 1) — with darkening luminance toward high risk. Always paired with the % value and level label. Neutral grey when there is no prediction. Exact color tokens live in `frontend/src/config/risk.ts` and are checked for color-blind distinguishability in T6.3. On the heart, an artery is additionally set off by a dark edge (`frontend/src/scene/colors.ts`), because the heart's own colours are close to the red end of the scale and, with a red-green deficiency, to its teal end as well.
 
 **BR-6 Agreement.** Inconsistent when (`cad` not predicted AND any vessel predicted) OR (`cad` predicted AND no vessel predicted). If inconsistent, show the neutral note in §9.2. Probabilities are never altered to force consistency.
 
@@ -139,6 +139,8 @@ Rules: each request gets an increasing id; responses with an older id are discar
 **BR-13 Validation.** All features required. Numeric: finite; integer when the schema says `integer`; within the dataset range [min, max] observed across the inputs of all 303 rows (D-018). Binary: boolean. Categorical/ordinal: one of the schema's categories. Unknown fields rejected. The frontend sends nothing while invalid; the backend re-validates (HTTP 422).
 
 **BR-14 Display.** Probabilities as integer % (e.g., "58%"); a value that would round to 100% or 0% is shown as ">99%" or "<1%", because a model is never certain (D-056). Measurements per schema unit and step. Relative contribution as integer %, or "<1%" when 0 < |r| < 0.5%.
+
+**BR-15 Unusual combinations** (added 2026-10-10, D-075). Some inputs are tied together in the dataset but are separate fields in the form: body mass index is weight ÷ height² in every row; obesity is recorded as yes when the body mass index is above 25 (all rows but one); no patient has more than one of typical, atypical and non-anginal chest pain; none is both a current and an ex-smoker. When the current inputs break one of these, a note "Unusual combination" under the patient picker names what does not fit and says that the estimates go beyond the data the models were trained on. The note is advisory: no input is changed and no request is blocked. A body mass index within 0.5 kg/m² of what weight and height give counts as matching.
 
 ## 8. AI behavior
 
@@ -181,7 +183,7 @@ Rules: each request gets an increasing id; responses with an older id are discar
 
 ## 11. Visual design direction
 
-- Light, clean surfaces; teal/blue primary; slate text; risk colors reserved for risk only.
+- Light, clean surfaces; teal/blue primary; slate text; risk colors reserved for risk only. The heart has the colours of a heart (changed on 2026-10-10 at Satvik's request, D-080): they carry no estimate, stay lighter than every risk colour, and every artery has a dark edge that keeps it apart from the heart.
 - Rounded cards, soft shadows, generous spacing; one sans-serif family (chosen in T1.4).
 - Avoid neon, heavy gradients, glassmorphism, large glows, over-animation, hospital-admin look, childish visuals.
 - In 3 seconds a judge must see: what it does (header + tagline), what to do (sample picker), what it produced (colored arteries + CAD card).

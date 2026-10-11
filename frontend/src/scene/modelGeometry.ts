@@ -1,19 +1,21 @@
 // Geometry of the heart model (public/models/heart.glb): plain functions on three.js objects, no
 // rendering, so they can be tested without WebGL.
 
-import { BufferAttribute, BufferGeometry, Matrix3, Mesh, Vector3, type Object3D } from "three";
+import { BufferAttribute, BufferGeometry, Color, Matrix3, Mesh, Vector3, type Object3D } from "three";
 import { VESSELS, type VesselId } from "../config/vessels";
+import { HEART_REGION_COLORS } from "./colors";
+import { MODEL_HEART_REGIONS } from "./heartModelData";
 
-// Object names in the model file. The three arteries are named by the vessel registry (TC-3).
+// Object names in the model file. The arteries and their branches are named by the vessel
+// registry (TC-3).
 export const HEART_OBJECT = "heart";
 export const LEFT_MAIN_OBJECT = "artery-left-main";
-export const BRANCHES_OBJECT = "artery-branches";
 
 export interface HeartModelParts {
   heart: BufferGeometry;
-  leftMain: BufferGeometry; // neutral: the stem before the LAD and the LCX
-  branches: BufferGeometry; // neutral: the models estimate the three vessels, not their branches
-  arteries: Record<VesselId, BufferGeometry>;
+  leftMain: BufferGeometry; // neutral: the stem the LAD and the LCX share
+  arteries: Record<VesselId, BufferGeometry>; // the trunk of each vessel
+  branches: Record<VesselId, BufferGeometry>; // each vessel's branches, coloured like its trunk
 }
 
 /**
@@ -56,7 +58,74 @@ export function inflated(geometry: BufferGeometry, distance: number): BufferGeom
   return thicker;
 }
 
-function part(root: Object3D, name: string): BufferGeometry {
+/** Several surfaces as one geometry (positions, normals, triangles), so they are drawn and hit as one. */
+export function merged(geometries: readonly BufferGeometry[]): BufferGeometry {
+  const vertexCount = geometries.reduce((sum, geometry) => sum + geometry.getAttribute("position").count, 0);
+  const positions = new Float32Array(vertexCount * 3);
+  const normals = new Float32Array(vertexCount * 3);
+  const indices: number[] = [];
+  let offset = 0;
+  for (const geometry of geometries) {
+    const position = geometry.getAttribute("position");
+    const normal = geometry.getAttribute("normal");
+    for (let index = 0; index < position.count; index += 1) {
+      const at = (offset + index) * 3;
+      positions[at] = position.getX(index);
+      positions[at + 1] = position.getY(index);
+      positions[at + 2] = position.getZ(index);
+      normals[at] = normal.getX(index);
+      normals[at + 1] = normal.getY(index);
+      normals[at + 2] = normal.getZ(index);
+    }
+    const triangles = geometry.index;
+    if (!triangles) throw new Error("Only indexed geometries can be merged.");
+    for (let corner = 0; corner < triangles.count; corner += 1) indices.push(triangles.getX(corner) + offset);
+    offset += position.count;
+  }
+  const whole = new BufferGeometry();
+  whole.setAttribute("position", new BufferAttribute(positions, 3));
+  whole.setAttribute("normal", new BufferAttribute(normals, 3));
+  whole.setIndex(indices);
+  return whole;
+}
+
+/**
+ * A vessel as one surface, thicker than in the model: the trunk moved outwards by `distance` and
+ * its branches, which are thinner, by `branchShare` of that. `outline` is added to both alike:
+ * the width of an edge drawn around the vessel, the same on the trunk and on its branches.
+ */
+export function thickenedVessel(
+  trunk: BufferGeometry,
+  branches: BufferGeometry,
+  distance: number,
+  branchShare: number,
+  outline = 0,
+): BufferGeometry {
+  return merged([inflated(trunk, distance + outline), inflated(branches, distance * branchShare + outline)]);
+}
+
+/**
+ * Colours for a geometry whose vertices are marked with their region. The model file marks a
+ * region as a pure colour (red, green, blue: the first, second and third region); the strongest
+ * channel tells which, so the mark survives the file's compression. A file without marks gets
+ * the first colour throughout.
+ */
+export function regionColors(marks: BufferAttribute | undefined, count: number, palette: readonly string[]): BufferAttribute {
+  // Vertex colours are read as linear values; Color converts each hex colour once.
+  const shades = palette.map((hex) => new Color(hex));
+  const colors = new Float32Array(count * 3);
+  for (let index = 0; index < count; index += 1) {
+    let region = 0;
+    if (marks) {
+      const channels = [marks.getX(index), marks.getY(index), marks.getZ(index)];
+      region = channels.indexOf(Math.max(...channels));
+    }
+    shades[Math.min(region, shades.length - 1)].toArray(colors, index * 3);
+  }
+  return new BufferAttribute(colors, 3);
+}
+
+function mesh(root: Object3D, name: string): Mesh {
   let found: Mesh | undefined;
   root.traverse((object) => {
     // The loader keeps a node's name from the file in userData and may alter `name` to keep it unique.
@@ -64,7 +133,21 @@ function part(root: Object3D, name: string): BufferGeometry {
     if (!found && named && (object as Mesh).isMesh) found = object as Mesh;
   });
   if (!found) throw new Error(`The heart model has no "${name}" mesh.`);
-  return bakedGeometry(found);
+  return found;
+}
+
+function part(root: Object3D, name: string): BufferGeometry {
+  return bakedGeometry(mesh(root, name));
+}
+
+/** The heart surface, each region in its own colour. */
+function heartPart(root: Object3D): BufferGeometry {
+  const source = mesh(root, HEART_OBJECT);
+  const heart = bakedGeometry(source);
+  const marks = source.geometry.getAttribute("color") as BufferAttribute | undefined;
+  const palette = MODEL_HEART_REGIONS.map((region) => HEART_REGION_COLORS[region]);
+  heart.setAttribute("color", regionColors(marks, heart.getAttribute("position").count, palette));
+  return heart;
 }
 
 /**
@@ -73,19 +156,18 @@ function part(root: Object3D, name: string): BufferGeometry {
  */
 export function readHeartModel(root: Object3D): HeartModelParts {
   root.updateWorldMatrix(true, true);
+  const perVessel = (name: (vessel: (typeof VESSELS)[number]) => string) =>
+    Object.fromEntries(VESSELS.map((vessel) => [vessel.id, part(root, name(vessel))])) as Record<VesselId, BufferGeometry>;
   return {
-    heart: part(root, HEART_OBJECT),
+    heart: heartPart(root),
     leftMain: part(root, LEFT_MAIN_OBJECT),
-    branches: part(root, BRANCHES_OBJECT),
-    arteries: Object.fromEntries(VESSELS.map((vessel) => [vessel.id, part(root, vessel.objectName)])) as Record<
-      VesselId,
-      BufferGeometry
-    >,
+    arteries: perVessel((vessel) => vessel.objectName),
+    branches: perVessel((vessel) => vessel.branchesObjectName),
   };
 }
 
 export function disposeHeartModel(parts: HeartModelParts): void {
-  [parts.heart, parts.leftMain, parts.branches, ...Object.values(parts.arteries)].forEach((geometry) =>
-    geometry.dispose(),
+  [parts.heart, parts.leftMain, ...Object.values(parts.arteries), ...Object.values(parts.branches)].forEach(
+    (geometry) => geometry.dispose(),
   );
 }

@@ -9,6 +9,7 @@ import {
   BOOT_START_HINT,
   RETRY,
 } from "../../config/copy";
+import { isWindows } from "../../utils/environment";
 import { BUTTON_CLASS, Skeleton } from "./Feedback";
 
 export function BootSkeleton() {
@@ -45,7 +46,7 @@ export function BootError({ error, onRetry }: BootErrorProps) {
           <p className="mt-1 text-sm text-ink-muted">{error.message}</p>
           <p className="mt-4 text-sm text-ink">{BOOT_START_HINT}</p>
           <pre className="mt-2 overflow-x-auto rounded-md bg-canvas p-3 text-xs text-ink">
-            {BOOT_START_COMMANDS.join("\n")}
+            {BOOT_START_COMMANDS[isWindows() ? "windows" : "other"].join("\n")}
           </pre>
         </>
       )}

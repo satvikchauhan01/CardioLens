@@ -64,6 +64,16 @@ export function riskColor(probability: number | null | undefined): string {
   return fromOklab(from.map((value, i) => value + (to[i] - value) * share) as Triple);
 }
 
+/**
+ * How different two colours look: their distance in OKLab, times 100. About 2 can just be told
+ * apart side by side; from 15 on, two colours are plainly different.
+ */
+export function colorDistance(a: string, b: string): number {
+  const first = toOklab(a);
+  const second = toOklab(b);
+  return 100 * Math.hypot(first[0] - second[0], first[1] - second[1], first[2] - second[2]);
+}
+
 /** WCAG relative luminance of a hex colour, 0 (black) to 1 (white). */
 export function relativeLuminance(hex: string): number {
   const [r, g, b] = hexToLinearRgb(hex);

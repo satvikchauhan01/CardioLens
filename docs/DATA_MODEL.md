@@ -210,14 +210,20 @@ The linear explainer uses every training row as background, so its base value is
 // src/config/vessels.ts — 3D-specific config only; display labels come from /api/meta
 interface VesselConfig {
   id: "lad" | "lcx" | "rca";
-  objectName: `artery-${"lad" | "lcx" | "rca"}`;
+  objectName: `artery-${"lad" | "lcx" | "rca"}`;                  // the trunk
+  branchesObjectName: `artery-${"lad" | "lcx" | "rca"}-branches`; // its branches, coloured like the trunk
   preferredView: "front" | "back" | "left" | "right";   // preset used when selected from the list
 }
 const HEART_MODEL_URL: string | null;   // "/models/heart.glb"; null draws the stand-in heart only
 
 // public/models/heart.glb — named objects, in the coordinate space below (built by tools/heart_model):
 //   "heart" · "artery-lad" · "artery-lcx" · "artery-rca" (the trunk of each vessel)
-//   "artery-left-main" · "artery-branches" (neutral: not estimated by any model)
+//   "artery-lad-branches" · "artery-lcx-branches" · "artery-rca-branches" (each vessel's named
+//   branches; the build checks that a branch touches the trunk it is listed under and no other)
+//   "artery-left-main" (neutral: shared by the LAD and the LCX, so it belongs to no estimate)
+//   The "heart" mesh carries COLOR_0 as a region mark per vertex: pure red, green or blue for the
+//   regions of MODEL_HEART_REGIONS ("ventricle", "atrium", "great_vessel"); the colours themselves
+//   are in src/scene/colors.ts (HEART_REGION_COLORS)
 // src/scene/heartModelData.ts — generated with the model: MODEL_ARTERY_PATHS (centre line, radius and
 //   label anchors per artery, as ArteryPath), MODEL_BOUNDS, MODEL_UNITS_PER_MM, MODEL_SOURCES (FMA ids)
 // Coordinate space: +x patient's left, +y up, +z towards the viewer in the front view; the model is

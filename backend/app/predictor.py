@@ -6,6 +6,7 @@ import pandas as pd
 
 from app.registry import Registry
 from ml.config import DECISION_THRESHOLD, RISK_LEVELS, TARGET_IDS, VESSEL_IDS
+from ml.explain import direction
 
 PROBABILITY_DECIMALS = 4
 SHAP_DECIMALS = 6
@@ -40,18 +41,18 @@ def agreement(predictions: dict[str, dict]) -> dict:
 
 
 def _rounded(explanation: dict) -> dict:
+    contributions = []
+    for item in explanation["contributions"]:
+        # Adding 0.0 turns a rounded -0.0 into 0.0. The direction follows the value that is sent,
+        # so a contribution that rounds to nothing is "neutral", not "raises" beside a 0 (BR-7).
+        shap = round(item["shap"], SHAP_DECIMALS) + 0.0
+        relative = round(item["relative"], RELATIVE_DECIMALS) + 0.0
+        contributions.append({**item, "shap": shap, "relative": relative, "direction": direction(shap)})
     return {
         **explanation,
         "base_value": round(explanation["base_value"], SHAP_DECIMALS),
         "output_value": round(explanation["output_value"], SHAP_DECIMALS),
-        "contributions": [
-            {
-                **item,
-                "shap": round(item["shap"], SHAP_DECIMALS),
-                "relative": round(item["relative"], RELATIVE_DECIMALS),
-            }
-            for item in explanation["contributions"]
-        ],
+        "contributions": contributions,
     }
 
 

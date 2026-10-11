@@ -8,16 +8,17 @@ export type ViewPresetId = "front" | "back" | "left" | "right";
 
 export interface VesselConfig {
   id: VesselId;
-  objectName: `artery-${VesselId}`;
+  objectName: `artery-${VesselId}`; // the trunk of the artery in the heart model
+  branchesObjectName: `artery-${VesselId}-branches`; // its branches, which take the same colour
   preferredView: ViewPresetId; // the view that shows this artery when it is chosen from the list
 }
 
 export const VESSELS: readonly VesselConfig[] = [
   // The views follow the heart model: the LCX trunk comes into sight on the back, and most of the
   // RCA lies along the right border as seen from the front.
-  { id: "lad", objectName: "artery-lad", preferredView: "front" },
-  { id: "lcx", objectName: "artery-lcx", preferredView: "back" },
-  { id: "rca", objectName: "artery-rca", preferredView: "front" },
+  { id: "lad", objectName: "artery-lad", branchesObjectName: "artery-lad-branches", preferredView: "front" },
+  { id: "lcx", objectName: "artery-lcx", branchesObjectName: "artery-lcx-branches", preferredView: "back" },
+  { id: "rca", objectName: "artery-rca", branchesObjectName: "artery-rca-branches", preferredView: "front" },
 ];
 
 export function isVesselId(id: string): id is VesselId {
@@ -25,8 +26,8 @@ export function isVesselId(id: string): id is VesselId {
 }
 
 /**
- * URL of the heart model, built by tools/heart_model/build_heart.py. It holds the heart and one
- * mesh per vessel, named by `objectName` above. With null, or when the file cannot be used, the
- * viewer draws the stand-in heart instead (F11).
+ * URL of the heart model, built by tools/heart_model/build_heart.py. It holds the heart and, for
+ * each vessel, the two meshes named above. With null, or when the file cannot be used, the viewer
+ * draws the stand-in heart instead (F11).
  */
 export const HEART_MODEL_URL: string | null = "/models/heart.glb";

@@ -138,7 +138,21 @@ await shootElement("viewer_sample_d_lad.png", VIEWER);
 await shootElement("ground_truth_sample_d_lad.png", RESULTS, TRUTH_BOX);
 await shootElement("explanation_sample_d_lad.png", EXPLANATION);
 
+// Ask the browser itself to quit: killing the process that was started here would leave its
+// helper processes running.
 socket.close();
+try {
+  const { webSocketDebuggerUrl } = await (await fetch(`http://127.0.0.1:${PORT}/json/version`)).json();
+  const whole = new WebSocket(webSocketDebuggerUrl);
+  await new Promise((resolve, reject) => {
+    whole.onopen = resolve;
+    whole.onerror = reject;
+  });
+  whole.send(JSON.stringify({ id: 1, method: "Browser.close" }));
+  await sleep(1000);
+} catch {
+  // Already gone.
+}
 child.kill();
 await sleep(500);
 try {

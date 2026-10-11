@@ -1,12 +1,14 @@
 // F11: the same arteries, colours and selection as the 3D viewer, drawn flat in SVG for browsers
 // without WebGL. It is the front view of the same paths, so the two can never disagree; the parts
-// that run behind the heart are dashed.
+// that run behind the heart are dashed. As in 3D, every artery has a dark edge that keeps it
+// readable on the heart's own colour.
 
 import type { KeyboardEvent } from "react";
 import { NO_ESTIMATE_COLOR } from "../config/risk";
 import { VESSELS, type VesselId } from "../config/vessels";
 import { ARTERY_PATHS, arteryPath } from "./arteryPaths";
 import {
+  ARTERY_OUTLINE_COLOR,
   HEART_COLOR,
   HEART_OUTLINE_COLOR,
   HOVERED_OUTLINE_COLOR,
@@ -18,6 +20,7 @@ import { frontOutline, isAnterior, type Vec3 } from "./heartShape";
 const SCALE = 100;
 const VIEW_BOX = "-185 -150 370 300"; // room on both sides for the labels
 const STROKE = 9;
+const EDGE = 3; // the dark edge around an artery: this much wider than the artery itself
 
 const project = ([x, y]: Vec3 | [number, number]) => `${(x * SCALE).toFixed(1)},${(-y * SCALE).toFixed(1)}`;
 
@@ -82,7 +85,10 @@ export function VesselSchematic2D({
         onClick={onSelectHeart}
       />
       {leftMain && (
-        <path d={line(leftMain.points)} fill="none" stroke={NEUTRAL_VESSEL_COLOR} strokeWidth={STROKE} strokeLinecap="round" />
+        <>
+          <path d={line(leftMain.points)} fill="none" stroke={ARTERY_OUTLINE_COLOR} strokeWidth={STROKE + EDGE} strokeLinecap="round" />
+          <path d={line(leftMain.points)} fill="none" stroke={NEUTRAL_VESSEL_COLOR} strokeWidth={STROKE} strokeLinecap="round" />
+        </>
       )}
       {VESSELS.map((config) => {
         const path = ARTERY_PATHS.find((candidate) => candidate.id === config.id);
@@ -124,19 +130,24 @@ export function VesselSchematic2D({
                 strokeLinejoin="round"
               />
             )}
-            {runs(path.points).map((run, index) => (
-              <path
-                key={index}
-                data-run={run.anterior ? "front" : "behind"}
-                d={line(run.points)}
-                fill="none"
-                stroke={vessel.color ?? NO_ESTIMATE_COLOR}
-                strokeWidth={STROKE}
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeDasharray={run.anterior ? undefined : "3 9"}
-              />
-            ))}
+            {/* First every run's dark edge, then every run's colour on top of them. While the artery
+                is hovered or selected, the wider line above is its edge instead. */}
+            {(emphasized ? [false] : [true, false]).flatMap((edge) =>
+              runs(path.points).map((run, index) => (
+                <path
+                  key={`${edge ? "edge" : "run"}-${index}`}
+                  data-run={edge ? undefined : run.anterior ? "front" : "behind"}
+                  data-edge={edge ? "" : undefined}
+                  d={line(run.points)}
+                  fill="none"
+                  stroke={edge ? ARTERY_OUTLINE_COLOR : (vessel.color ?? NO_ESTIMATE_COLOR)}
+                  strokeWidth={edge ? STROKE + EDGE : STROKE}
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeDasharray={run.anterior ? undefined : "3 9"}
+                />
+              )),
+            )}
             <text
               x={labelX + (labelX >= 0 ? 14 : -14)}
               y={labelY}

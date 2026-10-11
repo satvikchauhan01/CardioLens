@@ -12,6 +12,9 @@ export const MODEL_UNITS_PER_MM = 0.024562;
 /** Bounding box of the whole model. Its centre is the point the camera orbits. */
 export const MODEL_BOUNDS = { min: [-1.3646, -1.15, -1.3076], max: [1.4646, 1.75, 1.3076] } as const;
 
+/** The regions of the heart mesh. Each vertex carries its region as a pure colour: red, green or blue, in this order. */
+export const MODEL_HEART_REGIONS = ["ventricle", "atrium", "great_vessel"] as const;
+
 /** The anatomical structures behind each object of the model, by FMA id. */
 export const MODEL_SOURCES: Record<string, readonly { fma: string; name: string; files: number }[]> = {
   "heart": [
@@ -33,20 +36,6 @@ export const MODEL_SOURCES: Record<string, readonly { fma: string; name: string;
     { fma: "FMA15098", name: "Wall of bulb of aorta", files: 1 },
     { fma: "FMA15086", name: "Pulmonary trunk proper", files: 1 },
   ],
-  "artery-branches": [
-    { fma: "FMA3860", name: "Diagonal branch of anterior descending branch of left coronary artery", files: 1 },
-    { fma: "FMA3888", name: "Second left anterior branch of anterior interventricular branch of left coronary artery", files: 1 },
-    { fma: "FMA3890", name: "Third left anterior branch of anterior interventricular branch of left coronary artery", files: 1 },
-    { fma: "FMA3902", name: "Left marginal artery", files: 1 },
-    { fma: "FMA3914", name: "First posterior ventricular branch of circumflex coronary artery", files: 1 },
-    { fma: "FMA79742", name: "Trunk of posterior interventricular branch of left coronary artery", files: 1 },
-    { fma: "FMA3815", name: "First anterior ventricular branch of right coronary artery", files: 1 },
-    { fma: "FMA3818", name: "Marginal branch of right coronary artery", files: 1 },
-    { fma: "FMA3807", name: "Conus branch of right coronary artery", files: 1 },
-    { fma: "FMA3823", name: "Sinoatrial nodal branch of right coronary artery", files: 1 },
-    { fma: "FMA3837", name: "First posterior ventricular branch of right coronary artery", files: 1 },
-    { fma: "FMA3829", name: "Anterior atrial branch of right coronary artery", files: 1 },
-  ],
   "artery-left-main": [
     { fma: "FMA4685", name: "Stem of left coronary artery", files: 1 },
   ],
@@ -58,6 +47,24 @@ export const MODEL_SOURCES: Record<string, readonly { fma: string; name: string;
   ],
   "artery-rca": [
     { fma: "FMA3802", name: "Trunk of right coronary artery", files: 3 },
+  ],
+  "artery-lad-branches": [
+    { fma: "FMA3860", name: "Diagonal branch of anterior descending branch of left coronary artery", files: 1 },
+    { fma: "FMA3888", name: "Second left anterior branch of anterior interventricular branch of left coronary artery", files: 1 },
+    { fma: "FMA3890", name: "Third left anterior branch of anterior interventricular branch of left coronary artery", files: 1 },
+  ],
+  "artery-lcx-branches": [
+    { fma: "FMA3902", name: "Left marginal artery", files: 1 },
+    { fma: "FMA3914", name: "First posterior ventricular branch of circumflex coronary artery", files: 1 },
+    { fma: "FMA79742", name: "Trunk of posterior interventricular branch of left coronary artery", files: 1 },
+  ],
+  "artery-rca-branches": [
+    { fma: "FMA3815", name: "First anterior ventricular branch of right coronary artery", files: 1 },
+    { fma: "FMA3818", name: "Marginal branch of right coronary artery", files: 1 },
+    { fma: "FMA3807", name: "Conus branch of right coronary artery", files: 1 },
+    { fma: "FMA3823", name: "Sinoatrial nodal branch of right coronary artery", files: 1 },
+    { fma: "FMA3837", name: "First posterior ventricular branch of right coronary artery", files: 1 },
+    { fma: "FMA3829", name: "Anterior atrial branch of right coronary artery", files: 1 },
   ],
 };
 

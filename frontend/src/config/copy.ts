@@ -27,11 +27,11 @@ export const BOOT_LOADING = "Loading the model service…";
 export const BOOT_ERROR_TITLE = "Can't reach the CardioLens model service.";
 export const BOOT_NOT_READY_PREFIX = "Model service not ready:";
 export const BOOT_START_HINT = "Start the backend from the project folder, then retry:";
-export const BOOT_START_COMMANDS = [
-  "cd backend",
-  ".\\.venv\\Scripts\\Activate.ps1",
-  "uvicorn app.main:app --port 8000",
-];
+// The same commands as the README's "Run the app"; only the activation line differs by system.
+export const BOOT_START_COMMANDS = {
+  windows: ["cd backend", ".\\.venv\\Scripts\\Activate.ps1", "uvicorn app.main:app --port 8000"],
+  other: ["cd backend", "source .venv/bin/activate", "uvicorn app.main:app --port 8000"],
+} as const;
 export const RETRY = "Retry";
 
 // An unexpected error while drawing a view (AppErrorBoundary)
@@ -52,6 +52,9 @@ export const QUICK_CONTROLS_HINT = "The inputs that matter most to the four mode
 // PRODUCT_SPEC §9.5, exact.
 export const WHAT_IF_NOTE =
   "What-if shows how the model's estimate responds to changed inputs. It does not predict the effect of treatment.";
+// BR-15: inputs that are set to a combination no patient in the dataset has (state/coherence.ts).
+export const COHERENCE_TITLE = "Unusual combination";
+export const COHERENCE_NOTE = "Estimates for such a combination go beyond the data the models were trained on.";
 export const RESET_TO_ORIGINAL = "Reset to original";
 export const modifiedLabel = (count: number) => `Modified (${count} ${count === 1 ? "field" : "fields"})`;
 export const IDLE_HINT = "Choose a sample patient or start from typical values";
@@ -164,7 +167,7 @@ export const LEGEND_NOTE =
 export const STAND_IN_NOTE =
   "The heart is a stylised shape and the artery courses are schematic, not patient anatomy.";
 export const MODEL_NOTE =
-  "The heart is a reference anatomy model, not this patient's heart. Only the three main arteries take a colour; their branches and the left main stem stay grey.";
+  "The heart is a reference anatomy model, not this patient's heart, and its own colours carry no estimate. Each artery and its branches take the colour of that artery's estimate; the left main stem, which the LAD and the LCX share, stays grey.";
 export const MODEL_UNAVAILABLE_NOTICE = "Detailed heart model unavailable";
 export const SCHEMATIC_NOTICE =
   "3D graphics are not available in this browser, so the arteries are shown as a flat front view. Dashed parts run behind the heart.";

@@ -19,6 +19,7 @@ import shutil
 import subprocess
 import sys
 import tempfile
+import time
 from pathlib import Path
 
 REPO = Path(__file__).resolve().parents[2]
@@ -170,6 +171,19 @@ def find_browser(preferred: str | None) -> str:
     raise RuntimeError("No Edge or Chrome found; pass --browser with the path of a Chromium browser.")
 
 
+def wait_for_file(path: Path, seconds: float = 60) -> None:
+    """Return once `path` exists and has stopped growing; raise if that does not happen in time."""
+    deadline = time.monotonic() + seconds
+    size = -1
+    while time.monotonic() < deadline:
+        current = path.stat().st_size if path.is_file() else -1
+        if current > 0 and current == size:
+            return
+        size = current
+        time.sleep(0.5)
+    raise RuntimeError(f"The browser did not write {path.name} within {seconds:.0f} s.")
+
+
 def page_count(pdf: Path) -> int:
     return len(re.findall(rb"/Type\s*/Page(?![s\w])", pdf.read_bytes()))
 
@@ -182,16 +196,22 @@ def build(browser: str | None, captures: Path | None) -> int:
         f'<!doctype html><html lang="en"><head><meta charset="utf-8"><base href="{DOCS.as_uri()}/">'
         f"<title>CardioLens: project report</title><style>{STYLE}</style></head><body>{body}</body></html>"
     )
-    with tempfile.TemporaryDirectory() as folder:
+    # ignore_cleanup_errors: the browser may still hold its profile folder for a moment afterwards.
+    with tempfile.TemporaryDirectory(ignore_cleanup_errors=True) as folder:
         source = Path(folder) / "report.html"
+        printed = Path(folder) / "report.pdf"
         source.write_text(page, encoding="utf-8")
         subprocess.run(
             [
                 find_browser(browser), "--headless=new", "--disable-gpu", "--no-pdf-header-footer",
-                f"--user-data-dir={Path(folder) / 'profile'}", f"--print-to-pdf={PDF}", source.as_uri(),
+                f"--user-data-dir={Path(folder) / 'profile'}", f"--print-to-pdf={printed}", source.as_uri(),
             ],
             check=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, timeout=120,
         )
+        # The command can return before the browser has written the file, so wait for it; and print
+        # into the temporary folder first, so that an old PDF is never taken for a new one.
+        wait_for_file(printed)
+        shutil.copyfile(printed, PDF)
     pages = page_count(PDF)
     print(f"  wrote {PDF.relative_to(REPO)}: {pages} pages, {PDF.stat().st_size / 1e6:.2f} MB")
     if pages > MAX_PAGES:

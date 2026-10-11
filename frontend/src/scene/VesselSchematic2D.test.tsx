@@ -77,6 +77,13 @@ describe("2D vessel schematic (F11)", () => {
 
   it("marks the selected artery and outlines the selected or hovered one", () => {
     renderSchematic({ selected: "rca", hovered: "lad" });
+    // An artery that is neither selected nor hovered has its dark edge under every run.
+    const edges = (element: Element) => Array.from(element.querySelectorAll("path[data-edge]"));
+    expect(edges(vessel(/^LCX/)).length).toBe(vessel(/^LCX/).querySelectorAll("path[data-run]").length);
+    expect(new Set(edges(vessel(/^LCX/)).map((path) => path.getAttribute("stroke")))).toEqual(new Set(["#3b141c"]));
+    expect(edges(vessel(/^RCA/))).toHaveLength(0);
+    expect(edges(vessel(/^LAD/))).toHaveLength(0);
+
     const outline = (element: Element) => element.querySelector('path[stroke="#0f172a"], path[stroke="#0369a1"]');
 
     expect(vessel(/^RCA/).getAttribute("aria-pressed")).toBe("true");

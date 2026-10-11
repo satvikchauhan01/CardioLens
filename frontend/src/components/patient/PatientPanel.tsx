@@ -4,6 +4,8 @@
 import type { SamplePatient } from "../../api/types";
 import {
   ALL_INPUTS_HEADING,
+  COHERENCE_NOTE,
+  COHERENCE_TITLE,
   IDLE_HINT,
   modifiedLabel,
   PATIENT_HEADING,
@@ -13,6 +15,8 @@ import {
   WHAT_IF_NOTE,
 } from "../../config/copy";
 import { modifiedFields } from "../../state/analysisReducer";
+import { coherenceNotes } from "../../state/coherence";
+import { useMeta } from "../../state/MetaContext";
 import type { Analysis } from "../../state/useAnalysis";
 import { Card } from "../common/Card";
 import { Badge, BUTTON_CLASS } from "../common/Feedback";
@@ -27,7 +31,10 @@ interface PatientPanelProps {
 
 export function PatientPanel({ samples, analysis }: PatientPanelProps) {
   const { state } = analysis;
+  const meta = useMeta();
   const modified = modifiedFields(state).length;
+  // BR-15: said as soon as the inputs form a combination the dataset does not contain.
+  const unusual = state.values ? coherenceNotes(state.values, meta.features) : [];
 
   return (
     <div className="space-y-4">
@@ -45,6 +52,17 @@ export function PatientPanel({ samples, analysis }: PatientPanelProps) {
             <button type="button" onClick={analysis.resetToOriginal} className={`${BUTTON_CLASS} px-2.5 py-1 text-xs`}>
               {RESET_TO_ORIGINAL}
             </button>
+          </div>
+        )}
+        {unusual.length > 0 && (
+          <div role="status" className="mt-3 rounded-lg border border-line bg-canvas p-3 text-xs">
+            <p className="font-medium text-ink">{COHERENCE_TITLE}</p>
+            <ul className="mt-1 list-disc space-y-1 pl-4 text-ink-muted">
+              {unusual.map((note) => (
+                <li key={note}>{note}</li>
+              ))}
+            </ul>
+            <p className="mt-1.5 text-ink-muted">{COHERENCE_NOTE}</p>
           </div>
         )}
       </Card>

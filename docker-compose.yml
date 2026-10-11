@@ -1,0 +1,24 @@
+# Runs CardioLens without installing Python or Node:
+#
+#   docker compose up --build
+#
+# Then open http://localhost:5173. The README has the details ("Run with Docker").
+services:
+  backend:
+    build: ./backend
+    healthcheck:
+      # 200 once the four models are loaded.
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/api/health')"]
+      interval: 5s
+      timeout: 5s
+      retries: 24
+      start_period: 10s
+
+  web:
+    build: ./frontend
+    depends_on:
+      backend:
+        condition: service_healthy
+    ports:
+      # The same address as the development setup.
+      - "5173:80"

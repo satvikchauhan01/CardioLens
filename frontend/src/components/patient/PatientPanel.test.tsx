@@ -1,5 +1,6 @@
 import { fireEvent, render, screen, within } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
+import type { FeatureValue } from "../../api/types";
 import { initialAnalysisState, type AnalysisState } from "../../state/analysisReducer";
 import { MetaContext } from "../../state/MetaContext";
 import type { Analysis } from "../../state/useAnalysis";
@@ -16,12 +17,12 @@ function loaded(overrides: Partial<AnalysisState> = {}): AnalysisState {
   };
 }
 
-function renderPanel(state: AnalysisState) {
+function renderPanel(state: AnalysisState, meta = META) {
   const analysis: Analysis = {
     state, loadSample: vi.fn(), loadTypical: vi.fn(), edit: vi.fn(), retry: vi.fn(), resetToOriginal: vi.fn(),
   };
   const ui = (next: AnalysisState) => (
-    <MetaContext.Provider value={META}>
+    <MetaContext.Provider value={meta}>
       <PatientPanel samples={SAMPLES} analysis={{ ...analysis, state: next }} />
     </MetaContext.Provider>
   );
@@ -205,6 +206,30 @@ describe("what-if explorer (F7)", () => {
 
     fireEvent.click(screen.getByRole("button", { name: "Reset to original" }));
     expect(analysis.resetToOriginal).toHaveBeenCalledOnce();
+  });
+
+  it("points out a combination of inputs that the dataset does not contain, and changes nothing (BR-15)", () => {
+    // The fixture's schema, with a second type of chest pain.
+    const atypical = { ...FEATURES[4], id: "atypical", source_column: "Atypical", label: "Atypical chest pain", default: false };
+    const meta = { ...META, features: [...FEATURES, atypical] };
+    const patient: Record<string, FeatureValue> = { ...A.features, atypical: false };
+    const state = (values: Record<string, FeatureValue>) => loaded({ loadedValues: patient, values });
+
+    const { analysis, rerender } = renderPanel(state(patient), meta);
+    expect(screen.queryByText("Unusual combination")).toBeNull();
+
+    rerender(state({ ...patient, atypical: true }));
+    const note = screen.getByRole("status");
+    expect(note.textContent).toBe(
+      "Unusual combination" +
+        "Typical chest pain and Atypical chest pain are both set to yes. No patient in the dataset has more than one type of chest pain." +
+        "Estimates for such a combination go beyond the data the models were trained on.",
+    );
+    expect(analysis.edit).not.toHaveBeenCalled();
+    expect(screen.getByText("Modified (1 field)")).toBeTruthy();
+
+    rerender(state({ ...patient, atypical: true, typical_chest_pain: false }));
+    expect(screen.queryByText("Unusual combination")).toBeNull();
   });
 
   it("states what a what-if change does and does not show", () => {

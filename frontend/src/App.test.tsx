@@ -170,6 +170,23 @@ describe("App boot (PRODUCT_SPEC §6.1)", () => {
     expect(screen.queryByRole("alert")).toBeNull();
   });
 
+  it.each([
+    ["Mozilla/5.0 (Windows NT 10.0; Win64; x64) Chrome/141.0", ".\\.venv\\Scripts\\Activate.ps1"],
+    ["Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) Chrome/141.0", "source .venv/bin/activate"],
+  ])("shows the start commands of the system the browser runs on (%s)", async (userAgent, activation) => {
+    const agent = vi.spyOn(navigator, "userAgent", "get").mockReturnValue(userAgent);
+    mockApi({
+      "/api/meta": () => {
+        throw new TypeError("Failed to fetch");
+      },
+    });
+    render(<App />);
+
+    const alert = await screen.findByRole("alert");
+    expect(alert.querySelector("pre")?.textContent).toBe(`cd backend\n${activation}\nuvicorn app.main:app --port 8000`);
+    agent.mockRestore();
+  });
+
   it("shows the service's reason when the models are not ready", async () => {
     const reason = "Artifacts not found in backend/artifacts. Run: python -m ml.train";
     mockApi({

@@ -12,6 +12,11 @@ export function isWebGLAvailable(): boolean {
   }
 }
 
+/** True on Windows, where the commands that start the backend are written differently. */
+export function isWindows(userAgent: string = navigator.userAgent): boolean {
+  return /Win(dows|32|64)/i.test(userAgent);
+}
+
 const REDUCED_MOTION = "(prefers-reduced-motion: reduce)";
 
 /** Follows the system's reduced-motion setting; transitions become instant when it is on. */

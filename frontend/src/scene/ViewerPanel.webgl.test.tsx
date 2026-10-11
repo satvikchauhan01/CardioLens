@@ -39,7 +39,7 @@ function renderPanel(predicted = true) {
 }
 
 const MODEL_NOTE =
-  "The heart is a reference anatomy model, not this patient's heart. Only the three main arteries take a colour; their branches and the left main stem stay grey.";
+  "The heart is a reference anatomy model, not this patient's heart, and its own colours carry no estimate. Each artery and its branches take the colour of that artery's estimate; the left main stem, which the LAD and the LCX share, stays grey.";
 
 afterEach(() => {
   sceneFails = false;

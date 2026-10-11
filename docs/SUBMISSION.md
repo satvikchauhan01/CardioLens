@@ -35,9 +35,9 @@ A single risk number does not say which artery a model is concerned about, or wh
 ### What it does
 
 - **Four estimates from four models.** Overall CAD, LAD, LCX and RCA, each from its own classifier on the same 54 clinical inputs: demographics and history, symptoms and examination, ECG findings, laboratory values and echo findings.
-- **A 3D heart that carries the estimates.** The three arteries take the colour of their estimated probability. Rotate, zoom, hover for a tooltip, click an artery to select it. The legend says what the colour means and what it does not: it is the probability for that artery, not the place of a narrowing.
+- **A 3D heart that carries the estimates.** A heart in the colours of a heart, on which each of the three arteries, with its branches, takes the colour of its estimated probability and is set off by a dark edge. Rotate, zoom, hover for a tooltip, click an artery to select it. The legend says what the colour means and what it does not: it is the probability for that artery, not the place of a narrowing.
 - **An explanation per vessel.** SHAP contributions for the selected target, with each input's value, unit, percentile among the training patients and share of the total contribution, and a short summary filled from a template.
-- **What-if.** Change an input and the estimates, the artery colours and the explanations update together in about half a second, with "before → after" on every estimate. The app says that this shows how the model responds, not the effect of a treatment.
+- **What-if.** Change an input and the estimates, the artery colours and the explanations update together in about half a second, with "before → after" on every estimate. The app says that this shows how the model responds, not the effect of a treatment, and it points out when an edit creates a combination of inputs that no patient in the dataset has.
 - **Held-out patients with their real labels.** Six sample patients were set aside before training. The app can put the dataset's angiography label next to each estimate, with a mark where the model is wrong.
 - **An evaluation page.** Cross-validated metrics for every candidate model and a baseline, ROC, calibration and confusion plots, the most important inputs per target, and the limitations.
 
@@ -47,8 +47,9 @@ A single risk number does not say which artery a model is concerned about, or wh
 - **Leakage guard.** The four angiography columns (`LAD`, `LCX`, `RCA`, `Cath`) are never inputs to any model. The guard is in the data loader, the preprocessor, the trainer and the API's start-up check, and tests cover each place.
 - **Models and validation.** For each target, logistic regression, a random forest and gradient boosting are compared against a baseline with repeated stratified 5-fold cross-validation (5 repeats, 25 folds), with the preprocessing refitted inside every fold. Nothing is tuned. Seeds and versions are fixed, and one command retrains everything in about a minute.
 - **Service.** A FastAPI service loads the four models once and returns four probabilities and four SHAP explanations per request: median 80 ms from the browser on a laptop. Inputs are not stored or logged, and the app calls no outside service.
-- **3D.** The heart is built from 44 BodyParts3D anatomy parts into one file of 0.65 MB with about 92,000 triangles. The arteries are that model's own meshes. The same four ids (`cad`, `lad`, `lcx`, `rca`) run through the training code, the API and the names of the 3D objects, and tests check that they match. The viewer draws a frame in about 1 ms on integrated graphics; without WebGL the app shows a 2D schematic instead.
+- **3D.** The heart is built from 44 BodyParts3D anatomy parts into one file of 0.66 MB with about 92,000 triangles. The arteries are that model's own meshes: a trunk and its named branches per vessel, and the build checks that each branch springs from the trunk it is listed under. The same four ids (`cad`, `lad`, `lcx`, `rca`) run through the training code, the API and the names of the 3D objects, and tests check that they match. The viewer draws a frame in about 1.7 ms on integrated graphics; without WebGL the app shows a 2D schematic instead.
 - **Frontend.** React, TypeScript and React Three Fiber. The input form is built from the schema the service sends.
+- **Running it.** `docker compose up --build` starts both parts; without Docker, Python 3.13 and Node.js 22 with the steps in the README. The trained models are in the repository, so nothing has to be trained first.
 
 ### Results
 

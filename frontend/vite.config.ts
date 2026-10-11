@@ -2,7 +2,9 @@ import tailwindcss from "@tailwindcss/vite";
 import react from "@vitejs/plugin-react";
 import { defineConfig } from "vitest/config";
 
-const BACKEND_URL = "http://localhost:8000";
+// The address uvicorn listens on by default. Not "localhost": on some systems that name resolves
+// to the IPv6 address first, where the backend is not listening.
+const BACKEND_URL = "http://127.0.0.1:8000";
 
 export default defineConfig({
   plugins: [react(), tailwindcss()],
