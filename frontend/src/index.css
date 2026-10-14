@@ -1,14 +1,15 @@
 @import "tailwindcss";
 
 /*
- * Design tokens (PRODUCT_SPEC §11): light surfaces, blue primary, slate text.
- * Risk colors are not defined here; they are reserved for risk and live in src/config/risk.ts (BR-5).
+ * Design tokens (PRODUCT_SPEC §11): a light and a dark theme with the same roles; blue primary,
+ * slate text. Risk colors are not defined here; they are reserved for risk and live in
+ * src/config/risk.ts (BR-5), and they are the same in both themes.
  */
 @theme {
   /* System font stack: nothing to download at runtime (D-007, D-033). */
   --font-sans: ui-sans-serif, system-ui, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
 
-  --color-canvas: #f8fafc;
+  --color-canvas: #f5f7fb;
   --color-surface: #ffffff;
   --color-line: #e2e8f0;
   --color-ink: #0f172a;
@@ -16,13 +17,110 @@
   --color-brand: #0369a1;
   --color-brand-strong: #075985;
   --color-brand-soft: #f0f9ff;
+  /* Decoration only (icons, the header's top line). Never a risk colour, never the only cue. */
+  --color-accent: #4f46e5;
+  --color-accent-soft: #eef2ff;
   /* Form and request errors only, always with text. */
   --color-danger: #b91c1c;
   --color-danger-soft: #fef2f2;
+  /* Behind a risk bar, ring or gauge. Light in both themes: the risk scale gets darker with risk,
+     so its dark end needs a light ground to stay readable. */
+  --color-track: #e2e8f0;
+  /* Behind an evaluation plot. The plots are light images in both themes. */
+  --color-paper: #ffffff;
+
+  --animate-page: page-in 0.24s ease-out both;
+  --animate-flash: flash 0.7s ease-out;
+  --animate-pop: pop-in 0.18s ease-out both;
+
+  @keyframes page-in {
+    from {
+      opacity: 0;
+      transform: translateY(6px);
+    }
+    to {
+      opacity: 1;
+      transform: none;
+    }
+  }
+  /* A value that has just changed. */
+  @keyframes flash {
+    from {
+      background-color: var(--color-brand-soft);
+    }
+    to {
+      background-color: transparent;
+    }
+  }
+  @keyframes pop-in {
+    from {
+      opacity: 0;
+      transform: translateY(4px) scale(0.98);
+    }
+    to {
+      opacity: 1;
+      transform: none;
+    }
+  }
 }
 
 @layer base {
+  :root {
+    color-scheme: light;
+    /* The ground behind the 3D heart: lighter in the middle, where the heart is. */
+    --stage-inner: #ffffff;
+    --stage-outer: #e6ecf4;
+  }
+
+  /* The dark theme. Written twice: for a visitor whose system is dark before the app has started,
+     and for the choice made with the switch in the header (state/useTheme.ts). */
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme]) {
+      color-scheme: dark;
+      --color-canvas: #0b1220;
+      --color-surface: #131c2e;
+      --color-line: #2a3850;
+      --color-ink: #e6edf7;
+      --color-ink-muted: #a3b3c9;
+      --color-brand: #38bdf8;
+      --color-brand-strong: #7dd3fc;
+      --color-brand-soft: #102a40;
+      --color-accent: #a5b4fc;
+      --color-accent-soft: #1e2347;
+      --color-danger: #fca5a5;
+      --color-danger-soft: #3b1418;
+      --color-track: #dbe3ee;
+      --stage-inner: #4a5d7b;
+      --stage-outer: #111a2b;
+    }
+  }
+  :root[data-theme="dark"] {
+    color-scheme: dark;
+    --color-canvas: #0b1220;
+    --color-surface: #131c2e;
+    --color-line: #2a3850;
+    --color-ink: #e6edf7;
+    --color-ink-muted: #a3b3c9;
+    --color-brand: #38bdf8;
+    --color-brand-strong: #7dd3fc;
+    --color-brand-soft: #102a40;
+    --color-accent: #a5b4fc;
+    --color-accent-soft: #1e2347;
+    --color-danger: #fca5a5;
+    --color-danger-soft: #3b1418;
+    --color-track: #dbe3ee;
+    --stage-inner: #4a5d7b;
+    --stage-outer: #111a2b;
+  }
+
   body {
     @apply bg-canvas text-ink antialiased;
+  }
+}
+
+@layer components {
+  /* The ground behind the heart, in the viewer and on the Home page. */
+  .heart-stage {
+    background: radial-gradient(circle at 50% 44%, var(--stage-inner), var(--stage-outer) 78%);
   }
 }

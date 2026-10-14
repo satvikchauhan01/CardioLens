@@ -126,12 +126,12 @@ def test_metrics_record_the_validation_that_was_run(trained):
     assert metrics["model_version"] == manifest["model_version"]
     assert metrics["validation"]["n_repeats"] == 1
     assert metrics["validation"]["n_splits"] == 5
-    assert metrics["validation"]["n_rows"] == 297
+    assert metrics["validation"]["n_rows"] == 291
     assert metrics["validation"]["excluded_columns"] == list(EXCLUDED_COLUMNS)
     assert list(metrics["targets"]) == list(TARGET_IDS)
     for scores in metrics["targets"].values():
         assert scores["selected_model"] in scores["candidates"]
-        assert scores["n_positive"] + scores["n_negative"] == 297
+        assert scores["n_positive"] + scores["n_negative"] == 291
 
 
 def test_inputs_do_not_depend_on_the_number_of_repeats(trained):

@@ -6,7 +6,7 @@ import type { FormValue, FormValues } from "./validation";
 
 export interface AnalysisState {
   status: "idle" | "predicting" | "ready" | "input_invalid" | "error";
-  source: "sample" | "typical" | null;
+  source: "sample" | "custom" | null; // custom: entered on the New patient page
   sampleId: string | null;
   loadedValues: Record<string, FeatureValue> | null; // values when the patient was loaded
   values: FormValues | null; // current, possibly modified or incomplete, values
@@ -23,7 +23,7 @@ export type AnalysisAction =
   | {
       type: "LOAD";
       requestId: number;
-      source: "sample" | "typical";
+      source: "sample" | "custom";
       sampleId: string | null;
       values: Record<string, FeatureValue>;
     }

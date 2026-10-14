@@ -29,6 +29,10 @@ export function Badge({ children }: { children: string }) {
 export const BUTTON_CLASS =
   "cursor-pointer rounded-md border border-line bg-surface px-3 py-1.5 text-sm font-medium text-ink hover:border-brand hover:text-brand focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand";
 
+/** The one action a page is there for. */
+export const PRIMARY_BUTTON_CLASS =
+  "cursor-pointer rounded-md border border-brand bg-brand px-3 py-1.5 text-sm font-medium text-surface hover:border-brand-strong hover:bg-brand-strong focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand disabled:cursor-not-allowed disabled:border-line disabled:bg-line disabled:text-ink-muted";
+
 interface ErrorNoticeProps {
   title: string;
   message: string;

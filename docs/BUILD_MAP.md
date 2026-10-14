@@ -350,7 +350,9 @@ Cut in this order if behind schedule:
 | T11.3 | 🧑 To do: Satvik records | — | DEMO_FLOW §3.1 now holds a narration draft of about 800 words (six minutes), one paragraph per segment with what to do on screen; every number in it is from the running app or `metrics.json`. The heart model's credit must be in the app before recording, because the footer is on screen |
 | T11.4 | Done · open rows are Satvik's | `0aad65b` | See §7 below. Every row of PROBLEM_ANALYSIS §3 was checked: 19 pass, 1 passes with the on-screen check open (TC-1), 1 is open on the heart model's credit (ASSET-1), 4 wait for the video and the submission. Fresh copy of exactly the files git would publish, new environment, README followed: the app runs, 219 backend and 251 frontend tests pass, the build passes. The "master prompt §15 checklist" is not in the project folder, so it was not run (DECISIONS §3 item 17) |
 | T11.5 | 🧑 To do: Satvik submits | — | `docs/SUBMISSION.md` holds a draft of the Devpost description, the field values and a list of checks before pressing Submit. The repository page opens without signing in (checked 2026-10-08) |
-| Audit | Done, not committed · ⛳ review | — | 2026-10-10, at Satvik's request: every module read, the API and the UI attacked with scripts, the models retrained and compared. See §8 below: four defects fixed, three changes Satvik chose (coloured branches, notes on unusual combinations, Docker Compose, which was run and checked), no change to the models. Then the heart was given its own colours at his request (D-080). `pytest` 221 passed, `npm run test` 286 passed in 24 files, build passes |
+| Audit | Done · ⛳ review | `d50c3a0` | 2026-10-10, at Satvik's request: every module read, the API and the UI attacked with scripts, the models retrained and compared. See §8 below: four defects fixed, three changes Satvik chose (coloured branches, notes on unusual combinations, Docker Compose, which was run and checked), no change to the models. Then the heart was given its own colours at his request (D-080). `pytest` 221 passed, `npm run test` 286 passed in 24 files, build passes |
+| Pages | Done, not committed · ⛳ review | — | 2026-10-11, at Satvik's request ("everything is just on one page", "keep healthy patients too"). See §9 below: four pages (Patients, New patient, Analysis, Model & method), twelve held-out sample patients (six with the dataset label CAD, six with Normal), models retrained on the remaining 291 rows (model version `20261011T1756Z-7393432`), every number in the app's documents refreshed. Reading values from an uploaded report was asked about and left out at his choice (D-086). `pytest`: 229 passed; `npm run test`: 315 passed in 26 files; build passes; 153 browser checks pass on the dev server and through Docker with no console message |
+| Interface | Done, not committed · ⛳ review | — | 2026-10-12, at Satvik's request ("enhance the ui make it more interactive and attractive"). See §10 below: a Home page as the first screen, a light and a dark theme, a six-step guided tour, the models' estimates on the patient cards with a filter, a gauge for the overall estimate, details per input in the explanation, a heart that turns once on arrival, estimates that count to their new value. No model, artifact or API change. `pytest`: 229 passed; `npm run test`: 391 passed in 31 files; build passes; 196 browser checks pass on the dev server and through Docker with no console message |
 
 ## 5. Requirements trace check (T7.2, 2026-10-07)
 
@@ -499,3 +501,102 @@ Frame cost with the branches coloured: median 1.5 ms, 3.6 ms at most; 5 draw cal
 1. Heart model credit and licence (unchanged, urgent: §7.4 item 1).
 2. A person's look at the screen: frame rate while rotating, a visible Edge window, colour-vision emulation (DECISIONS §3 items 10 and 12).
 3. Video and Devpost submission (T11.3, T11.5). The narration draft and the description draft are updated for the coloured branches.
+
+## 9. Four pages and twelve sample patients (2026-10-11)
+
+Asked for by Satvik after the audit: the app looked like "a very basic project" on one page, every sample patient seemed to be sick, the built-in patients and a patient of one's own should be separate, and could a medical report be uploaded and read. Three questions were asked together before any work (D-036). His answers: **twelve sample patients, six with CAD and six without**; **four pages**; **no report upload for now**. Working tree: commit `d50c3a0` plus the changes listed here.
+
+### 9.1 What changed
+
+| Area | Change | Decision |
+|---|---|---|
+| Held-out patients | `HOLDOUT_SLOTS` has twelve slots instead of six. The rule is the same and picks slot by slot, so Samples A to F are the same patients as before (a test checks it); G to L are rows 13, 225, 79, 41, 203, 300. Six have the dataset label CAD, six Normal; the three single-vessel patients cover LAD, LCX and RCA | D-081 |
+| Models | Retrained on the remaining 291 rows. The same model type is selected for every target. ROC-AUC before → after: CAD 0.917 ± 0.033 → 0.917 ± 0.037 · LAD 0.855 ± 0.053 → 0.851 ± 0.049 · LCX 0.739 ± 0.056 → 0.726 ± 0.076 · RCA 0.725 ± 0.045 → 0.728 ± 0.057. Model version `20261011T1756Z-7393432` | D-081 |
+| Pages | Patients · New patient · Analysis · Model & method, as tabs in the header, each with its own address, so Back and Forward work. The app still opens on Analysis with Sample A. A page is built when first opened and then kept, so nothing entered is lost when changing page | D-082 |
+| Patients page | The twelve samples as cards in two groups by the dataset's overall label, with four of their inputs each; the one in analysis is marked | D-083 |
+| New patient page | The full form on its own page, starting from typical values or from any sample; nothing is sent until "Analyse this patient". On the Analysis page such a patient is called "Your patient" and has no dataset label to compare with | D-084 |
+| Percent display | An estimate below 50% is never shown as "50%": Sample A's RCA is 49.5% after the retrain and would have read "50% · Stenosis not predicted" | D-085 |
+| Report upload | Not built; named as future work in the README, the report, the Devpost draft and the Q&A table | D-086 |
+| Report and README | Figure 1 is the Analysis page with the new numbers; Figure 3 shows Sample B (three of four targets match, the miss marked) instead of Sample D; the README has two more screenshots (Patients page, a patient without CAD) | D-087 |
+
+### 9.2 The twelve sample patients with the retrained models
+
+The models' predictions match the dataset labels for 39 of 48 targets: four of four for C, F, I, J, K and L; three of four for A (RCA), B (LCX), E (CAD) and G (RCA); two of four for H (LAD, RCA); one of four for D (LAD, LCX, RCA). Five of the six patients with the label Normal get a CAD estimate between 7% and 41%; Sample E gets 91%. The table with every estimate is in DEMO_FLOW §1. With six samples and the earlier models it was 21 of 24; Sample A is no longer a full match, because its RCA estimate fell from 52% to 49.5%.
+
+### 9.3 What was checked
+
+| Area | How | Result |
+|---|---|---|
+| Backend | `pytest` | 229 passed (221 before): the twelve slots, half with CAD and half without, the first six unchanged, 291 training rows, twelve samples through the API |
+| Frontend | `npm run test`, `npm run build` | 315 passed in 26 files (286 before); type-check and build pass. New: both new pages, the four tabs by mouse and keyboard, addresses and Back, a patient without disease end to end, a patient of the user's own end to end, pages built on first opening, the percent rule |
+| API | The audit script of §8.1 against the retrained service | No problem. Through Docker, three of its checks (`/docs`, `/openapi.json`, an encoded `..` in a plot path) are answered by the web container with the app's own page, because those paths are not forwarded to the service; no API page or model file is returned |
+| UI | The two browser scripts of §8.1, rewritten for the pages, in Microsoft Edge 155 without a window | 118 and 35 checks pass on the dev server and through Docker, no console message, no horizontal overflow on any of the four pages from 1920 to 390 px wide. Every sample's four estimates on screen equal the API's answer, and the count of matches equals the labels |
+| Docker | `docker compose up --build`, Engine 28.5.1 | Both images build; health 200 with the new model version; the twelve samples get the same estimates as without Docker |
+| Report | Rebuilt with new screenshots | 5 pages; every page looked at |
+
+### 9.4 Measured again (2026-10-11, Edge 155, same laptop)
+
+One prediction with four explanations from the browser: median 86 ms, 95th percentile 99 to 123 ms over three runs of 50 calls. First estimates after opening the optimized build: about 0.2 s (0.15 to 0.22 s over warm loads; about 0.35 s on a first visit). One frame of the turning heart: median 1.0 ms, 95th percentile 1.3 ms, 2.0 ms at most over nine runs of 240 frames; 1.3 ms zoomed in; 9 draw calls; 122,593 triangles. Page code 288 kB (90 kB gzipped); 3D chunk and heart model unchanged. A first attempt gave slower and unsteady numbers: six test browsers left running by two measurement scripts that had failed were using the machine. They were closed, and the test harness now closes its browser when a script fails (D-088).
+
+### 9.5 Open after this work
+
+1. Everything of §8.5: the heart model's credit and licence (still the one open requirement), the on-screen checks, the video and the Devpost submission.
+2. The narration draft (DEMO_FLOW §3.1) and the Devpost draft (`docs/SUBMISSION.md`) were rewritten for the pages and the new numbers; they need Satvik's reading again.
+3. For Satvik's review: the Patients page shows each sample's overall dataset label before its analysis is opened (D-083), and Figure 3 of the report now shows Sample B (D-087).
+
+## 10. A more interactive interface (2026-10-12)
+
+Asked for by Satvik on top of the four pages of §9, which were not yet committed: "enhance the ui make it more interactive and attractive". Three questions were asked together before any work (D-036). His answers: **light plus dark mode**; **all four interactive additions** (estimates on the patient cards, a living heart and results, a guided tour, a CAD gauge and richer charts); **a Home page as the first screen**. Working tree: commit `d50c3a0` plus the changes of §9 and of this section.
+
+### 10.1 What changed
+
+| Area | Change | Decision |
+|---|---|---|
+| Home page | A fifth page and the first screen: headline, a heart that turns slowly in the colours of the estimates of the patient in analysis, four numbers from the model service, three ways in, four steps. Sample A is still analysed at once, behind it. The heart on Home exists only while Home is on screen, so there is one 3D scene at a time | D-089 |
+| Themes | A light and a dark theme from one set of colour tokens; the app starts as the system has it and a switch in the header changes it for the visit (nothing is stored, BR-12). Risk colours are the same in both; risk bars, rings and the gauge lie on a light track; the evaluation plots stay light images on white. The header has two rows: mark, name and actions, then the tabs with icons | D-090 |
+| Patients page | Every card shows the models' estimates for its patient: a ring for CAD and a bar per artery. They are asked from `POST /api/predict` when the page is first opened, three at a time and marked as less urgent. "Show" narrows the page to one dataset label | D-091 |
+| Results | The overall estimate is a half-circle gauge in its risk colour with a mark at the 50% threshold. Estimates count to their new value; bars slide; an artery lights up once when its estimate changes or it is selected and is then back at exactly its risk colour | D-092 |
+| Guided tour | "Take the tour" in the header and on Home: six notes on the Analysis page, each with one part of the page lit. Keyboard, focus and reduced motion are handled; the page is not changed by it | D-093 |
+| Viewer and explanation | The heart turns once around on arrival and stops for good when it is touched, an artery is under the pointer or a view is asked for; "Auto-rotate" starts it again. Pointing at an input of the explanation, or focusing it, opens a note with its SHAP value and unit, share, percentile in words and dataset range | D-094 |
+| Report and README | The figures were retaken in the light theme; the README gained the Home page and a dark-theme tour screenshot; the report says five pages, two themes, one tour, and is still 5 pages long | D-095 |
+
+### 10.2 What was checked
+
+| Area | How | Result |
+|---|---|---|
+| Backend | `pytest` | 229 passed; nothing in the backend changed |
+| Frontend | `npm run test`, `npm run build` | 391 passed in 31 files (315 in 26 before). New: Home, the theme switch from a light and from a dark system, the tour alone and in the app, the cards' estimates (hook, page, whole app, failure and Retry), the filter, the gauge, the details note, counting up, the heart's turn in both places |
+| UI | The two browser scripts of §9.3, extended, and a third for the tour, in Microsoft Edge 155 without a window, light theme forced | 137, 41 and 18 checks pass on the dev server and through Docker; no console message; no horizontal overflow on any of the five pages from 1920 to 390 px wide; every card's ring and bars equal the API's answer; the tour's light is on its target and its note inside the window at 1366, 1024 and 390 px wide |
+| Both themes | Every page looked at in the light and the dark theme, 1366 and 390 px wide | As intended. This laptop's system is dark, so the app opens dark here |
+| API | The audit script of §8.1, through Docker | As in §9.3: every API request as expected; the same three paths that the web container answers with its own page |
+| Docker | `docker compose up --build`, Engine 28.5.1 | Both images build; all checks above pass against the containers |
+| Report | Rebuilt | 5 pages, after the new sentences were shortened; every page looked at |
+
+One thing the checks found: the first browser run read estimates while they were still counting up. The app was right; the scripts now wait for the count to end.
+
+### 10.3 Measured again (2026-10-12, Edge 155, same laptop)
+
+One prediction with four explanations from the browser: median 88 ms, 95th percentile 93 to 98 ms over four runs of 50 calls. First estimates after opening the app on Home, optimized build: about 0.15 s (0.14 to 0.17 s over warm loads; about 0.4 s on a first visit). One frame of the turning heart: median 1.0 ms, 95th percentile 1.6 ms at most, 2.6 ms at most over nine runs of 240 frames; 1.4 ms zoomed in; 9 draw calls; 122,593 triangles. The twelve cards have their estimates 1.0 to 1.1 s after the Patients page is opened; a patient chosen while they are still loading is analysed in 0.4 to 0.5 s, the count-up included. Page code 315 kB (97 kB gzipped), styles 37 kB (7 kB gzipped); 3D chunk and heart model unchanged.
+
+### 10.4 Open after this work
+
+1. Everything of §9.5 and §8.5: the heart model's credit and licence (still the one open requirement), the on-screen checks, the video and the Devpost submission.
+2. For Satvik's review: the app now opens on Home, not on the analysis (D-089); it opens in the dark theme on a system that is dark, as this laptop is (D-090); the selected artery lights up once and is not lit permanently (D-092).
+3. The narration draft and the demo script were adjusted for Home, the gauge and the cards' estimates; they need his reading again before recording.
+
+## 11. A colour of its own for each artery (2026-10-12)
+
+Asked for by Satvik after §10: "a small correction in the heart model, keep different colour for each of the arteries so that they can be easily distinguishable". One question was asked first, because the arteries' colour is the estimate (BR-5, the track's requirement): where should the identity colour go? He chose **on the rim**, and the fill stays the risk colour (D-096).
+
+| Area | Change |
+|---|---|
+| Registry | `rimColor` and `rimColorName` per vessel in `config/vessels.ts`: LAD blue, LCX magenta, RCA green, chosen as one set with the palette validator |
+| 3D heart | The edge copy under each artery has its own colour and is wider (0.5, hovered 0.85 of the radius); selected stays the ink colour; the left main stem keeps the dark edge. No new draw call: still 9 |
+| 2D schematic | The same rims, a dot beside each label, wider hover line |
+| Labels, list, tooltip, legend | A colour bar on the 3D label (Home and Analysis), a bar before the artery's name in the list, a dot on the tooltip, and a key in the legend with the colour names |
+| Tests | 391 passed in 31 files (383 before): rim colours pairwise, against the heart and against the risk scale; schematic rims, hover and selection; labels, tooltip, legend key, list swatches; the scene is still given the risk colours, not the rims |
+| Browser | Both audits and the tour check pass again (137, 41 and 18 checks, no console message); the heart looked at on three patients in both themes, selected, and under four colour-vision simulations |
+| Documents | README, report (still 5 pages: the new Figure 3 has the legend key, so two other sentences were shortened), PRODUCT_SPEC BR-5 and §11, DATA_MODEL, DEMO_FLOW, SUBMISSION; figures retaken |
+
+Open: the video should show the legend key once; the narration says the three colours. Satvik's review of the colours themselves (DECISIONS §3 item 32).
+

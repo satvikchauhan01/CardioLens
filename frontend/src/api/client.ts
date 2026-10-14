@@ -77,11 +77,16 @@ export function getMetrics(): Promise<MetricsResponse> {
   return request<MetricsResponse>("/metrics");
 }
 
-export function predict(features: Record<string, FeatureValue>): Promise<PredictResponse> {
+/** `background`: an estimate nobody is waiting for; the browser may send it after urgent requests. */
+export function predict(
+  features: Record<string, FeatureValue>,
+  options: { background?: boolean } = {},
+): Promise<PredictResponse> {
   return request<PredictResponse>("/predict", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ features }),
+    ...(options.background ? { priority: "low" as const } : {}),
   });
 }
 

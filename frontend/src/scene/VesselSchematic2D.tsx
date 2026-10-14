@@ -11,7 +11,6 @@ import {
   ARTERY_OUTLINE_COLOR,
   HEART_COLOR,
   HEART_OUTLINE_COLOR,
-  HOVERED_OUTLINE_COLOR,
   NEUTRAL_VESSEL_COLOR,
   SELECTED_OUTLINE_COLOR,
 } from "./colors";
@@ -20,7 +19,7 @@ import { frontOutline, isAnterior, type Vec3 } from "./heartShape";
 const SCALE = 100;
 const VIEW_BOX = "-185 -150 370 300"; // room on both sides for the labels
 const STROKE = 9;
-const EDGE = 3; // the dark edge around an artery: this much wider than the artery itself
+const EDGE = 5; // the rim around an artery, in its own colour: this much wider than the artery itself
 
 const project = ([x, y]: Vec3 | [number, number]) => `${(x * SCALE).toFixed(1)},${(-y * SCALE).toFixed(1)}`;
 
@@ -124,14 +123,14 @@ export function VesselSchematic2D({
               <path
                 d={line(path.points)}
                 fill="none"
-                stroke={selected ? SELECTED_OUTLINE_COLOR : HOVERED_OUTLINE_COLOR}
-                strokeWidth={STROKE + 5}
+                stroke={selected ? SELECTED_OUTLINE_COLOR : config.rimColor}
+                strokeWidth={STROKE + 8}
                 strokeLinecap="round"
                 strokeLinejoin="round"
               />
             )}
-            {/* First every run's dark edge, then every run's colour on top of them. While the artery
-                is hovered or selected, the wider line above is its edge instead. */}
+            {/* First every run's rim, in the artery's own colour, then every run's risk colour on top
+                of them. While the artery is hovered or selected, the wider line above is its rim. */}
             {(emphasized ? [false] : [true, false]).flatMap((edge) =>
               runs(path.points).map((run, index) => (
                 <path
@@ -140,7 +139,7 @@ export function VesselSchematic2D({
                   data-edge={edge ? "" : undefined}
                   d={line(run.points)}
                   fill="none"
-                  stroke={edge ? ARTERY_OUTLINE_COLOR : (vessel.color ?? NO_ESTIMATE_COLOR)}
+                  stroke={edge ? config.rimColor : (vessel.color ?? NO_ESTIMATE_COLOR)}
                   strokeWidth={edge ? STROKE + EDGE : STROKE}
                   strokeLinecap="round"
                   strokeLinejoin="round"
@@ -148,8 +147,17 @@ export function VesselSchematic2D({
                 />
               )),
             )}
+            <circle
+              data-rim-swatch=""
+              cx={labelX + (labelX >= 0 ? 8 : -8)}
+              cy={labelY}
+              r={4}
+              fill={config.rimColor}
+              stroke="var(--color-surface)"
+              strokeWidth={1.5}
+            />
             <text
-              x={labelX + (labelX >= 0 ? 14 : -14)}
+              x={labelX + (labelX >= 0 ? 17 : -17)}
               y={labelY}
               textAnchor={labelX >= 0 ? "start" : "end"}
               dominantBaseline="middle"

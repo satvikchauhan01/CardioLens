@@ -3,6 +3,7 @@
 import { useState } from "react";
 import type { Explanation, TargetInfo } from "../../api/types";
 import {
+  EXPLANATION_DETAILS_HINT,
   EXPLANATION_HEADING,
   EXPLANATION_LEGEND,
   EXPLANATION_METHOD,
@@ -30,7 +31,7 @@ export function ExplanationPanel({ target, explanation }: ExplanationPanelProps)
   const headingId = "explanation-heading";
 
   return (
-    <section aria-labelledby={headingId}>
+    <section aria-labelledby={headingId} data-tour="explanation">
       <h3 id={headingId} className="text-sm font-semibold text-ink">
         {EXPLANATION_HEADING}: {target.short_label}
       </h3>
@@ -38,9 +39,11 @@ export function ExplanationPanel({ target, explanation }: ExplanationPanelProps)
         {MODEL_TYPE_LABELS[explanation.model_type]} · {EXPLANATION_METHOD}
       </p>
       <p className="mt-2 text-sm text-ink">{explanation.summary}</p>
-      <p className="mt-2 text-xs text-ink-muted">{EXPLANATION_LEGEND}</p>
+      <p className="mt-2 text-xs text-ink-muted">
+        {EXPLANATION_LEGEND} {EXPLANATION_DETAILS_HINT}
+      </p>
 
-      <ul className="mt-1 divide-y divide-line">
+      <ul className="mt-1 divide-y divide-line/70">
         {shown.map((contribution) => {
           const feature = featureById(meta, contribution.feature);
           return feature ? (
@@ -49,6 +52,7 @@ export function ExplanationPanel({ target, explanation }: ExplanationPanelProps)
               contribution={contribution}
               feature={feature}
               scale={scale}
+              units={explanation.shap_units}
             />
           ) : null;
         })}

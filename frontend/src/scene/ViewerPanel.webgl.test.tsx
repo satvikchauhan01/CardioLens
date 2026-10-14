@@ -147,3 +147,115 @@ describe("viewer panel with WebGL", () => {
     expect(screen.queryByText(MODEL_NOTE)).toBeNull();
   });
 });
+
+describe("the heart's own turn", () => {
+  function renderTurning(props: { active?: boolean } = {}) {
+    const ui = (viewRequest: { view: "front"; nonce: number } | null, active = props.active ?? true) => (
+      <MetaContext.Provider value={META}>
+        <ViewerPanel
+          predictions={predictResponse().predictions}
+          status="ready"
+          selectedTarget="cad"
+          hoveredVessel={null}
+          viewRequest={viewRequest}
+          active={active}
+          onRequestView={vi.fn()}
+          onSelectTarget={vi.fn()}
+          onHoverVessel={vi.fn()}
+        />
+      </MetaContext.Provider>
+    );
+    const view = render(ui(null));
+    return { rerender: (viewRequest: { view: "front"; nonce: number } | null, active?: boolean) => view.rerender(ui(viewRequest, active)) };
+  }
+  const toggle = () => screen.getByRole("button", { name: "Auto-rotate" });
+  const stage = () => screen.getByRole("img").parentElement!;
+
+  it("turns once around from the start and stops when the scene says it is done", async () => {
+    renderTurning();
+    await screen.findByTestId("scene");
+
+    expect(scene!.turning).toBe(true);
+    expect(scene!.endlessTurn ?? false).toBe(false);
+    expect(toggle().getAttribute("aria-pressed")).toBe("true");
+
+    act(() => scene!.onTurnDone!());
+    expect(scene!.turning).toBe(false);
+    expect(toggle().getAttribute("aria-pressed")).toBe("false");
+  });
+
+  it("stops as soon as the heart is touched, and starts again on request", async () => {
+    renderTurning();
+    await screen.findByTestId("scene");
+
+    fireEvent.pointerDown(stage());
+    expect(scene!.turning).toBe(false);
+
+    fireEvent.click(toggle());
+    expect(scene!.turning).toBe(true);
+    fireEvent.wheel(stage());
+    expect(scene!.turning).toBe(false);
+
+    fireEvent.click(toggle());
+    fireEvent.click(toggle());
+    expect(scene!.turning).toBe(false);
+  });
+
+  it("holds still while an artery is under the pointer", async () => {
+    renderTurning();
+    await screen.findByTestId("scene");
+
+    act(() => scene!.onHoverVessel("lad", { clientX: 120, clientY: 90 }));
+
+    expect(scene!.turning).toBe(false);
+  });
+
+  it("stops when a view is asked for, by a button or by choosing a vessel in the list", async () => {
+    const { rerender } = renderTurning();
+    await screen.findByTestId("scene");
+    expect(scene!.turning).toBe(true);
+
+    rerender({ view: "front", nonce: 1 });
+
+    expect(scene!.turning).toBe(false);
+    expect(scene!.viewRequest).toEqual({ view: "front", nonce: 1 });
+  });
+
+  it("does not turn while another page is on screen", async () => {
+    const { rerender } = renderTurning({ active: false });
+    await screen.findByTestId("scene");
+    expect(scene!.turning).toBe(false);
+    // The switch still shows that it will turn.
+    expect(toggle().getAttribute("aria-pressed")).toBe("true");
+
+    rerender(null, true);
+    expect(scene!.turning).toBe(true);
+  });
+});
+
+describe("the rim colour of each artery", () => {
+  it("is on each label, on the tooltip of the artery under the pointer, and named in the legend", async () => {
+    renderPanel();
+    await screen.findByTestId("scene");
+
+    const labels = Array.from(document.querySelectorAll<HTMLElement>("[data-label]"));
+    expect(labels.map((label) => label.style.borderLeftColor)).toEqual(["rgb(37, 99, 235)", "rgb(162, 28, 175)", "rgb(21, 128, 61)"]);
+
+    act(() => scene!.onHoverVessel("lcx", { clientX: 120, clientY: 90 }));
+    const dot = screen.getByRole("tooltip").querySelector<HTMLElement>("span")!;
+    expect(dot.style.backgroundColor).toBe("rgb(162, 28, 175)");
+    expect(screen.getByRole("tooltip").textContent).toBe("LCX · Left Circumflex · 22%");
+
+    expect(document.querySelector("[data-rim-key]")!.textContent).toBe(
+      "Rim colour names the artery:LAD (blue)LCX (magenta)RCA (green)The colour inside is its estimate.",
+    );
+  });
+
+  it("keeps the risk colour inside: the scene is given the estimates' colours, not the rims'", async () => {
+    renderPanel();
+    await screen.findByTestId("scene");
+
+    expect(Object.values(scene!.colors)).not.toContain("#2563eb");
+    expect(scene!.colors.lad).toBe(riskColor(0.581));
+  });
+});

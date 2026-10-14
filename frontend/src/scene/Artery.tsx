@@ -9,7 +9,8 @@ import { useEffect, useMemo, type ReactNode } from "react";
 import { CatmullRomCurve3, TubeGeometry, Vector3, type BufferGeometry, type MeshStandardMaterial } from "three";
 import type { VesselId } from "../config/vessels";
 import type { ArteryPath } from "./arteryPaths";
-import { ARTERY_OUTLINE_COLOR, HOVERED_OUTLINE_COLOR, SELECTED_OUTLINE_COLOR } from "./colors";
+import { VESSELS } from "../config/vessels";
+import { ARTERY_OUTLINE_COLOR, SELECTED_OUTLINE_COLOR } from "./colors";
 import { thickenedVessel } from "./modelGeometry";
 import { useRiskMaterial } from "./useRiskMaterial";
 
@@ -20,8 +21,8 @@ const RADIAL_SEGMENTS = 12;
 const EMPHASIS = 1.5; // while hovered or selected
 const HIT = 2.6; // the invisible shell that takes the pointer
 // Widths of the edge around the artery, as shares of the radius it is drawn with.
-export const OUTLINE_WIDTH = 0.3; // always
-const RIM_WIDTH = 0.5; // while hovered or selected
+export const OUTLINE_WIDTH = 0.5; // always: wide enough for the rim's own colour to be read
+const RIM_WIDTH = 0.85; // while hovered or selected
 // The edge is a slightly wider copy of the artery, drawn first and without writing depth; the
 // artery is then drawn over it, so the copy shows only around it. An artery lies half sunk in the
 // heart, and this way its edge is as wide on the side that is sunk as on the other. (A copy seen
@@ -79,8 +80,10 @@ function ArteryBody({
   onHover,
   children,
 }: ArteryBodyProps) {
-  const material = useRiskMaterial(color, reducedMotion);
+  const material = useRiskMaterial(color, reducedMotion, selected);
   const emphasized = selected || hovered;
+  // The artery's own rim colour; the left main stem, which has none, keeps the dark edge.
+  const rimColor = VESSELS.find((vessel) => vessel.id === id)?.rimColor ?? ARTERY_OUTLINE_COLOR;
 
   function hover(event: ThreeEvent<PointerEvent>) {
     event.stopPropagation();
@@ -91,7 +94,7 @@ function ArteryBody({
     <group name={objectName}>
       <mesh geometry={emphasized ? shapes.rim : shapes.outline} renderOrder={EDGE_ORDER} raycast={NOT_PICKABLE}>
         <meshBasicMaterial
-          color={selected ? SELECTED_OUTLINE_COLOR : hovered ? HOVERED_OUTLINE_COLOR : ARTERY_OUTLINE_COLOR}
+          color={selected ? SELECTED_OUTLINE_COLOR : rimColor}
           depthWrite={false}
         />
       </mesh>

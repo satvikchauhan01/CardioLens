@@ -1,12 +1,14 @@
 import { describe, expect, it } from "vitest";
 import { FEATURES } from "../test/fixtures";
 import {
+  DECISION_THRESHOLD,
   deltaPoints,
   formatBound,
   formatDelta,
   formatMeasurement,
   formatNumber,
   formatPercent,
+  formatPoints,
   formatRelative,
   formatStat,
   ordinal,
@@ -62,8 +64,24 @@ describe("formatting (BR-14)", () => {
     expect(formatPercent(0)).toBe("<1%");
   });
 
+  it("prints whole points with the same two ends as a probability", () => {
+    expect([0, 1, 49, 50, 99, 100].map(formatPoints)).toEqual(["<1%", "1%", "49%", "50%", "99%", ">99%"]);
+  });
+
   it("rounds to whole percentage points within 0 to 100", () => {
     expect([0.581, 0.9975, 0, 1.4, -0.2].map(percentPoints)).toEqual([58, 100, 0, 100, 0]);
+  });
+
+  it("never rounds an estimate below the decision threshold up onto it", () => {
+    expect(DECISION_THRESHOLD).toBe(0.5);
+    // 49.5% is not predicted, so it must not read "50%" next to "not predicted".
+    expect([0.494, 0.495, 0.4999, 0.5, 0.504, 0.505].map(percentPoints)).toEqual([49, 49, 49, 50, 50, 51]);
+    expect(formatPercent(0.495)).toBe("49%");
+    expect(formatPercent(0.4999)).toBe("49%");
+    expect(formatDelta(0.495, 0.357)).toBe("49% → 36%, −13 pp");
+    expect(formatDelta(0.4999, 0.5)).toBe("49% → 50%, +1 pp");
+    // Every other boundary rounds as usual.
+    expect([0.345, 0.3449, 0.645, 0.995].map(percentPoints)).toEqual([35, 34, 65, 100]);
   });
 
   it("prints a what-if change as before → after with signed percentage points (BR-10)", () => {

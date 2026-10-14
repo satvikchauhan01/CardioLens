@@ -20,7 +20,10 @@ export const HEART_OUTLINE_COLOR = "#c47f7a"; // edge of the flat heart in the 2
 export const GREAT_VESSEL_COLOR = HEART_REGION_COLORS.great_vessel; // the stand-in heart's aorta, pulmonary trunk and vena cava
 // The stand-in heart's left main stem: drawn, but not one of the three estimated vessels.
 export const NEUTRAL_VESSEL_COLOR = "#64748b";
-// Around every artery, always: it keeps a vessel readable on the heart whatever its risk colour.
+// Around the left main stem, which belongs to no estimate and no artery of the three: dark, so it
+// stays readable on the heart. The three arteries have a rim of their own colour instead
+// (config/vessels.ts, rimColor), as dark as this one by lightness.
 export const ARTERY_OUTLINE_COLOR = "#3b141c";
-export const SELECTED_OUTLINE_COLOR = "#0f172a"; // the page's ink colour
-export const HOVERED_OUTLINE_COLOR = "#0369a1"; // the page's brand colour
+// Around the selected artery, whichever it is: the page's ink colour. A hovered artery keeps its
+// own rim colour and only gets a wider one.
+export const SELECTED_OUTLINE_COLOR = "#0f172a";

@@ -42,16 +42,16 @@ export const FEATURES: FeatureSchema[] = [
 ];
 
 export const META: MetaResponse = {
-  model_version: "20261007T1423Z-7393432",
-  trained_at: "2026-10-07T14:23:00Z",
+  model_version: "20261011T1756Z-7393432",
+  trained_at: "2026-10-11T17:56:54Z",
   dataset: {
     name: "extention of Z-Alizadeh sani dataset",
     citation: "Alizadehsani, R., Roshanzamir, M., & Sani, Z. (2013).",
     license: "CC BY 4.0",
     url: "https://archive.ics.uci.edu/dataset/411/extention+of+z+alizadeh+sani+dataset",
     n_total: 303,
-    n_train: 297,
-    n_holdout: 6,
+    n_train: 291,
+    n_holdout: 12,
   },
   targets: [
     { id: "cad", label: "Coronary artery disease", short_label: "CAD", kind: "overall", description: "At least one major coronary artery with ≥50% narrowing (dataset definition)", model_type: "logistic_regression", shap_units: "log_odds" },
@@ -93,6 +93,13 @@ export const SAMPLES: SamplePatient[] = [
     id: "sample-b", title: "Sample B", subtitle: "71 y · Female",
     features: { ...VALUES_A, age: 71, sex: "Female", dm: false, ef_tte: 40 },
     ground_truth: { cad: 1, lad: 0, lcx: 1, rca: 0 },
+    note: "Held out — not used for training or validation.",
+  },
+  {
+    // A patient without coronary artery disease by the dataset's labels.
+    id: "sample-c", title: "Sample C", subtitle: "45 y · Female",
+    features: { ...VALUES_A, age: 45, sex: "Female", dm: false, typical_chest_pain: false },
+    ground_truth: { cad: 0, lad: 0, lcx: 0, rca: 0 },
     note: "Held out — not used for training or validation.",
   },
 ];
@@ -174,8 +181,8 @@ function metricSet(rocAuc: number): MetricSet {
 function targetMetrics(target: TargetId, selected: ModelType, rocAuc: number, positives: number): TargetMetrics {
   return {
     n_positive: positives,
-    n_negative: 297 - positives,
-    prevalence: Number((positives / 297).toFixed(4)),
+    n_negative: 291 - positives,
+    prevalence: Number((positives / 291).toFixed(4)),
     selected_model: selected,
     selection_reason: selected === "logistic_regression" ? "Within 0.01 of best; simplest model preferred" : "Highest mean ROC-AUC",
     candidates: {
@@ -204,17 +211,17 @@ export const METRICS: MetricsResponse = {
     n_splits: 5,
     n_repeats: 5,
     seed: 42,
-    n_rows: 297,
+    n_rows: 291,
     decision_threshold: 0.5,
     preprocessing_inside_folds: true,
     excluded_columns: ["LAD", "LCX", "RCA", "Cath"],
-    holdout_note: "6 sample patients were held out by a fixed rule (seed 42) before any training; they are not used for cross-validation or the final fit.",
+    holdout_note: "12 sample patients were held out by a fixed rule (seed 42) before any training; they are not used for cross-validation or the final fit.",
   },
   targets: {
-    cad: targetMetrics("cad", "logistic_regression", 0.917, 212),
-    lad: targetMetrics("lad", "random_forest", 0.855, 174),
+    cad: targetMetrics("cad", "logistic_regression", 0.917, 210),
+    lad: targetMetrics("lad", "random_forest", 0.855, 173),
     lcx: targetMetrics("lcx", "random_forest", 0.739, 116),
-    rca: targetMetrics("rca", "logistic_regression", 0.725, 113),
+    rca: targetMetrics("rca", "logistic_regression", 0.725, 111),
   },
 };
 

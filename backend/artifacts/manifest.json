@@ -1,6 +1,6 @@
 {
-  "model_version": "20261007T1423Z-7393432",
-  "trained_at": "2026-10-07T14:23:36Z",
+  "model_version": "20261011T1756Z-7393432",
+  "trained_at": "2026-10-11T17:56:54Z",
   "data_file": "extention of Z-Alizadeh sani dataset.xlsx",
   "data_sha256": "739343245c2ba578b541370217531750d8e936022f928b83e0d91756caa3ff0b",
   "seed": 42,

@@ -119,12 +119,12 @@ A `ColumnTransformer` fitted inside each CV fold (no leakage from preprocessing)
 
 `preprocessing.py` also returns `transformed_to_feature`: for every transformed column, the original feature id. SHAP values of one-hot columns are **summed** back to their original feature (valid because SHAP values are additive).
 
-### 5.3 Held-out sample patients (D-016)
+### 5.3 Held-out sample patients (D-016, D-081)
 Chosen **before any model is trained**, by a fixed rule, so they cannot be picked for good model behaviour:
 1. `k` = number of stenotic vessels (LAD + LCX + RCA) per row. Rows failing the consistency check (§4) are not eligible.
-2. Slots in order: A: k=3 · B: k=2 · C: k=1 · D: k=1 (prefer a different stenotic vessel than C) · E: k=0 · F: k=0.
+2. Slots in order: A: k=3 · B: k=2 · C: k=1 · D: k=1 (prefer a different stenotic vessel than C) · E: k=0 · F: k=0 · G: k=2 · H: k=1 · I, J, K, L: k=0. Six slots have k ≥ 1 and six have k=0, so half of the sample patients have the dataset label CAD and half Normal. Slots G to L were added on 2026-10-11 at Satvik's choice (D-081); the rule picks slot by slot, so the first six patients are the ones it picked before (checked by a test).
 3. Each slot picks uniformly at random among unused eligible rows with that `k`, using `numpy.random.default_rng(42)`. If a slot's group is empty, it uses the group with the most remaining rows.
-4. The 6 rows are removed from all CV and final training. Remaining rows = **training rows** (297).
+4. The 12 rows are removed from all CV and final training. Remaining rows = **training rows** (291).
 
 "Prefer a different stenotic vessel" is applied to every `k=1` slot: rows whose single stenotic vessel no earlier `k=1` sample shows are tried first.
 
@@ -138,8 +138,14 @@ Chosen **before any model is trained**, by a fixed rule, so they cannot be picke
 | D | 88 | 71 y · Female | CAD · LCX stenotic |
 | E | 185 | 50 y · Male | Normal |
 | F | 286 | 50 y · Male | Normal |
+| G | 13 | 67 y · Female | CAD · LAD, RCA stenotic |
+| H | 225 | 48 y · Male | CAD · RCA stenotic |
+| I | 79 | 52 y · Male | Normal |
+| J | 41 | 40 y · Male | Normal |
+| K | 203 | 41 y · Female | Normal |
+| L | 300 | 48 y · Female | Normal |
 
-Training rows: CAD 212 / 85 · LAD 174 / 123 · LCX 116 / 181 · RCA 113 / 184 (positive / negative).
+Training rows (291): CAD 210 / 81 · LAD 173 / 118 · LCX 116 / 175 · RCA 111 / 180 (positive / negative). With the first six slots alone there were 297: CAD 212 / 85 · LAD 174 / 123 · LCX 116 / 181 · RCA 113 / 184.
 
 ## 6. Validation, selection, importance
 
@@ -158,7 +164,7 @@ Training rows: CAD 212 / 85 · LAD 174 / 123 · LCX 116 / 181 · RCA 113 / 184 (
 |---|---|
 | `manifest.json` | Version, timestamps, data hash, seed, library versions |
 | `feature_schema.json` | Features, groups, quick controls, excluded and dropped columns |
-| `samples.json` | 6 held-out sample patients + ground truth + source row index |
+| `samples.json` | 12 held-out sample patients + ground truth + source row index |
 | `metrics.json` | Validation setup + per-target metrics, selection, global importance, plot paths |
 | `reference_values.json` | Sorted training values per numeric feature (for percentiles) |
 | `models/{target}.joblib` | Model bundle per target (§7.6) |
@@ -210,6 +216,7 @@ The linear explainer uses every training row as background, so its base value is
 // src/config/vessels.ts — 3D-specific config only; display labels come from /api/meta
 interface VesselConfig {
   id: "lad" | "lcx" | "rca";
+  rimColor: string;                                               // the artery's own rim colour (D-096)
   objectName: `artery-${"lad" | "lcx" | "rca"}`;                  // the trunk
   branchesObjectName: `artery-${"lad" | "lcx" | "rca"}-branches`; // its branches, coloured like the trunk
   preferredView: "front" | "back" | "left" | "right";   // preset used when selected from the list
@@ -244,7 +251,7 @@ interface ArteryPath {
 // src/state/analysisReducer.ts — PRODUCT_SPEC §6.2
 interface AnalysisState {
   status: "idle" | "predicting" | "ready" | "input_invalid" | "error";
-  source: "sample" | "typical" | null;
+  source: "sample" | "custom" | null;
   sampleId: string | null;
   loadedValues: Record<string, FeatureValue> | null;   // values when the patient was loaded
   values: Record<string, FeatureValue | null> | null;  // current values; null = an empty field
@@ -266,5 +273,5 @@ interface AnalysisState {
 4. `Exertional CP` is constant and is dropped, so the models have 54 inputs, not 55 (§2).
 5. One row has inconsistent labels; it is kept as recorded (§4, D-040).
 6. Units are now sourced, with WBC and PLT left without a unit (§3, D-041).
-7. Class balance, vessel prevalences and the six held-out rows are filled in from the file (§1, §5.3).
+7. Class balance, vessel prevalences and the held-out rows (six at first, twelve since 2026-10-11, D-081) are filled in from the file (§1, §5.3).
 8. `step` added to the hand-maintained metadata (§3).

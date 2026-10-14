@@ -76,6 +76,8 @@ describe("reduced motion preference", () => {
   }
 
   it("is off where the browser has no media queries", () => {
+    vi.stubGlobal("matchMedia", undefined);
+
     expect(renderHook(() => usePrefersReducedMotion()).result.current).toBe(false);
   });
 

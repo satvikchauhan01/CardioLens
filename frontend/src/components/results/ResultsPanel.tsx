@@ -1,4 +1,4 @@
-// Right column of the Patient analysis tab. Renders every analysis state of PRODUCT_SPEC §6.2.
+// Right column of the Analysis page. Renders every analysis state of PRODUCT_SPEC §6.2.
 
 import type { TargetId } from "../../api/types";
 import {
@@ -97,6 +97,7 @@ export function ResultsPanel({
       <div className="space-y-4">
         {error}
         <div aria-busy={state.status === "predicting"} className={`space-y-4 ${stale ? "opacity-60" : ""}`}>
+          <div data-tour="estimates" className="space-y-4">
           {overall && (
             <CadSummaryCard
               target={overall}
@@ -121,6 +122,7 @@ export function ResultsPanel({
               truths={truths}
             />
             <p className="mt-1.5 text-xs text-ink-muted">{RISK_LEVEL_CAPTION}</p>
+          </div>
           </div>
           <AgreementNote agreement={shown.agreement} />
           {onShowGroundTruth && (

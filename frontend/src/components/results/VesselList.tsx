@@ -4,7 +4,9 @@
 import type { TargetId, TargetInfo, TargetPrediction } from "../../api/types";
 import { STATUS_TEXT, VESSELS_LABEL } from "../../config/copy";
 import { riskColor } from "../../config/risk";
-import { formatPercent, percentPoints } from "../../utils/format";
+import { rimColorOf } from "../../config/vessels";
+import { percentPoints } from "../../utils/format";
+import { AnimatedPercent } from "./AnimatedPercent";
 import { EstimateNotes } from "./EstimateNotes";
 
 interface VesselListProps {
@@ -50,7 +52,7 @@ export function VesselList({
               onMouseLeave={() => onHoverTarget?.(null)}
               onFocus={() => onHoverTarget?.(target.id)}
               onBlur={() => onHoverTarget?.(null)}
-              className={`w-full cursor-pointer rounded-lg border px-3 py-2 text-left focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand ${
+              className={`w-full cursor-pointer rounded-lg border px-3 py-2 text-left transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand motion-reduce:transition-none ${
                 selected
                   ? "border-brand bg-brand-soft"
                   : hovered
@@ -60,20 +62,26 @@ export function VesselList({
             >
               <span className="flex items-baseline justify-between gap-3">
                 <span>
+                  <span
+                    aria-hidden="true"
+                    data-rim-swatch={target.id}
+                    className="mr-1.5 inline-block h-3.5 w-1 rounded-sm align-middle"
+                    style={{ backgroundColor: rimColorOf(target.id) ?? undefined }}
+                  />
                   <span className="text-sm font-semibold text-ink">{target.short_label}</span>
                   <span className="text-xs text-ink-muted"> · {target.label}</span>
                 </span>
-                <span className="text-lg font-semibold text-ink">
-                  {formatPercent(prediction.probability)}
+                <span className="text-lg font-semibold tabular-nums text-ink">
+                  <AnimatedPercent probability={prediction.probability} />
                 </span>
               </span>
               <span
                 aria-hidden="true"
-                className="mt-1.5 block h-1.5 overflow-hidden rounded-full bg-line"
+                className="mt-1.5 block h-2 overflow-hidden rounded-full bg-track"
               >
                 <span
                   data-risk-bar={target.id}
-                  className="block h-full rounded-full"
+                  className="block h-full rounded-full transition-[width,background-color] duration-500 motion-reduce:transition-none"
                   style={{
                     width: `${percentPoints(prediction.probability)}%`,
                     backgroundColor: riskColor(prediction.probability),

@@ -35,9 +35,19 @@ export function formatMeasurement(feature: FeatureSchema, value: FeatureValue): 
   return feature.unit === "%" ? `${text}%` : `${text} ${feature.unit}`;
 }
 
-/** Probability rounded to whole percentage points, 0 to 100. */
+/** BR-3: a target is predicted from this probability on. The API sends the same value in /api/meta. */
+export const DECISION_THRESHOLD = 0.5;
+
+/**
+ * Probability in whole percentage points, 0 to 100. Rounded, with one exception: a probability
+ * just under the decision threshold is not rounded up onto it. 49.6% reads "49%", so an estimate
+ * shown as "50%" is always one that is predicted (BR-14).
+ */
 export function percentPoints(probability: number): number {
-  return Math.round(Math.min(1, Math.max(0, probability)) * 100);
+  const clamped = Math.min(1, Math.max(0, probability));
+  const points = Math.round(clamped * 100);
+  const threshold = DECISION_THRESHOLD * 100;
+  return clamped < DECISION_THRESHOLD && points >= threshold ? threshold - 1 : points;
 }
 
 /**
@@ -45,7 +55,11 @@ export function percentPoints(probability: number): number {
  * round to 100% or 0% is shown as ">99%" and "<1%" (BR-14).
  */
 export function formatPercent(probability: number): string {
-  const points = percentPoints(probability);
+  return formatPoints(percentPoints(probability));
+}
+
+/** Whole percentage points as text, with the same two ends: ">99%" and "<1%". */
+export function formatPoints(points: number): string {
   if (points >= 100) return ">99%";
   if (points <= 0) return "<1%";
   return `${points}%`;

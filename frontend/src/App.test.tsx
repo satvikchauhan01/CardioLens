@@ -30,10 +30,14 @@ function mockApi(routes: Record<string, Route> = {}) {
   const fetchMock = vi.fn(async (url: string, init?: RequestInit) => ({ ...defaults, ...routes })[url](init));
   vi.stubGlobal("fetch", fetchMock);
   const calls = (url: string) => fetchMock.mock.calls.filter(([called]) => called === url);
-  const predicted = () => calls("/api/predict").map(([, init]) => featuresOf(init));
-  return { calls, predicted };
+  // The estimates for the cards on the Patients page are marked as less urgent; the analysis is not.
+  const background = (init?: RequestInit) => (init as { priority?: string } | undefined)?.priority === "low";
+  const predicted = () => calls("/api/predict").filter(([, init]) => !background(init)).map(([, init]) => featuresOf(init));
+  const estimated = () => calls("/api/predict").filter(([, init]) => background(init)).map(([, init]) => featuresOf(init));
+  return { calls, predicted, estimated };
 }
 
+const mockedEstimate = estimate;
 const tab = (name: string) => screen.getByRole("tab", { name });
 const isSelected = (name: string) => tab(name).getAttribute("aria-selected") === "true";
 const disclaimer = () => screen.getByRole("note", { name: "Disclaimer" }).textContent;
@@ -46,11 +50,18 @@ const listRow = (name: RegExp) =>
 const artery = (name: RegExp) =>
   within(screen.getByRole("group", { name: /Heart schematic/ })).getByRole("button", { name });
 const arteryColor = (name: RegExp) => artery(name).querySelector("path[data-run]")?.getAttribute("stroke");
+// The wide line under a selected (ink) or hovered (the artery's own rim colour) artery in the schematic.
 const arteryOutline = (name: RegExp) =>
-  artery(name).querySelector('path[stroke="#0f172a"], path[stroke="#0369a1"]')?.getAttribute("stroke") ?? null;
+  artery(name).querySelector('path[stroke="#0f172a"]')?.getAttribute("stroke") ??
+  Array.from(artery(name).querySelectorAll("path")).find((path) => path.getAttribute("stroke-width") === "17")?.getAttribute("stroke") ??
+  null;
 const cssColor = (hex: string) => `rgb(${[1, 3, 5].map((i) => parseInt(hex.slice(i, i + 2), 16)).join(", ")})`;
-const barColor = (target: string) =>
-  document.querySelector<HTMLElement>(`[data-risk-bar="${target}"]`)?.style.backgroundColor;
+// A vessel's estimate is a bar, the overall one the arc of a gauge.
+const barColor = (target: string) => {
+  const bar = document.querySelector<HTMLElement>(`[data-risk-bar="${target}"]`);
+  const stroke = bar?.getAttribute("stroke");
+  return stroke ? cssColor(stroke) : bar?.style.backgroundColor;
+};
 const explanation = () => screen.getByRole("region", { name: /Why this estimate/ });
 // The same input can be in the quick controls and in the full form.
 const form = () => within(screen.getByRole("group", { name: "All clinical inputs" }));
@@ -61,16 +72,37 @@ const truth = (target: string) => document.querySelector(`[data-truth="${target}
 const truthToggle = () =>
   screen.getByRole("checkbox", { name: "Show dataset angiography result" }) as HTMLInputElement;
 const pause = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
+// The card on the Analysis page that names the patient in analysis.
+const patientCard = () => screen.getByRole("heading", { name: "Patient" }).closest("section")!.textContent ?? "";
+/** Chooses a sample on the Patients page, which opens its analysis. */
+function chooseSample(title: string) {
+  fireEvent.click(tab("Patients"));
+  fireEvent.click(screen.getByRole("button", { name: new RegExp(`^Analyse ${title},`) }));
+}
 
+const HOME_TITLE = "See which coronary artery a model is concerned about, and why.";
+
+/** A visit that starts on the Analysis page, with the first sample analysed. */
 async function boot(routes: Record<string, Route> = {}) {
+  window.history.replaceState(null, "", "#analysis");
   const api = mockApi(routes);
   render(<App />);
   await screen.findByRole("button", { name: /Coronary artery disease/ });
   return api;
 }
 
+/** A visit to the bare address: the app opens on Home. */
+async function bootHome(routes: Record<string, Route> = {}) {
+  const api = mockApi(routes);
+  render(<App />);
+  await screen.findByRole("heading", { name: HOME_TITLE });
+  return api;
+}
+
 afterEach(() => {
   vi.unstubAllGlobals();
+  // Each test starts without a page in the address.
+  window.history.replaceState(null, "", window.location.pathname);
 });
 
 describe("App shell", () => {
@@ -83,68 +115,139 @@ describe("App shell", () => {
     expect(disclaimer()).toBe(DISCLAIMER_TEXT);
   });
 
-  it("opens on Patient analysis and switches tabs on click, keeping the disclaimer", () => {
+  it("has five pages, opens on Home and switches on click, keeping the disclaimer", () => {
     mockApi();
     render(<App />);
-    expect(isSelected("Patient analysis")).toBe(true);
-    expect(screen.getByRole("tabpanel", { name: "Patient analysis" })).toBeTruthy();
+    expect(screen.getAllByRole("tab").map((element) => element.textContent)).toEqual([
+      "Home", "Patients", "New patient", "Analysis", "Model & method",
+    ]);
+    expect(isSelected("Home")).toBe(true);
+    expect(screen.getByRole("tabpanel", { name: "Home" })).toBeTruthy();
 
     fireEvent.click(tab("Model & method"));
     expect(isSelected("Model & method")).toBe(true);
-    expect(isSelected("Patient analysis")).toBe(false);
+    expect(isSelected("Home")).toBe(false);
     expect(screen.getByRole("tabpanel", { name: "Model & method" })).toBeTruthy();
-    expect(screen.queryByRole("tabpanel", { name: "Patient analysis" })).toBeNull();
+    expect(screen.queryByRole("tabpanel", { name: "Home" })).toBeNull();
     expect(disclaimer()).toBe(DISCLAIMER_TEXT);
   });
 
-  it("switches tabs with the arrow keys and moves focus", () => {
+  it("switches pages with the arrow keys, around both ends, and moves focus", () => {
     mockApi();
     render(<App />);
 
-    fireEvent.keyDown(tab("Patient analysis"), { key: "ArrowRight" });
+    fireEvent.keyDown(tab("Home"), { key: "ArrowLeft" });
     expect(isSelected("Model & method")).toBe(true);
     expect(document.activeElement).toBe(tab("Model & method"));
 
     fireEvent.keyDown(tab("Model & method"), { key: "ArrowRight" });
-    expect(isSelected("Patient analysis")).toBe(true);
-    expect(document.activeElement).toBe(tab("Patient analysis"));
+    expect(isSelected("Home")).toBe(true);
+    expect(document.activeElement).toBe(tab("Home"));
 
-    fireEvent.keyDown(tab("Patient analysis"), { key: "ArrowLeft" });
-    expect(isSelected("Model & method")).toBe(true);
-    expect(document.activeElement).toBe(tab("Model & method"));
+    for (const page of ["Patients", "New patient", "Analysis"]) {
+      fireEvent.keyDown(document.activeElement!, { key: "ArrowRight" });
+      expect(isSelected(page)).toBe(true);
+      expect(document.activeElement).toBe(tab(page));
+    }
+    fireEvent.keyDown(tab("Analysis"), { key: "ArrowLeft" });
+    expect(isSelected("New patient")).toBe(true);
   });
 
   it("keeps one tab in the tab order and ignores other keys", () => {
     mockApi();
     render(<App />);
+    const order = () => screen.getAllByRole("tab").map((element) => (element as HTMLElement).tabIndex);
 
-    expect([tab("Patient analysis").tabIndex, tab("Model & method").tabIndex]).toEqual([0, -1]);
-    expect(tab("Patient analysis").getAttribute("aria-controls")).toBe(screen.getByRole("tabpanel").id);
+    expect(order()).toEqual([0, -1, -1, -1, -1]);
+    expect(tab("Home").getAttribute("aria-controls")).toBe(screen.getByRole("tabpanel").id);
 
-    fireEvent.keyDown(tab("Patient analysis"), { key: "ArrowDown" });
-    fireEvent.keyDown(tab("Patient analysis"), { key: "a" });
-    expect(isSelected("Patient analysis")).toBe(true);
+    fireEvent.keyDown(tab("Home"), { key: "ArrowDown" });
+    fireEvent.keyDown(tab("Home"), { key: "a" });
+    expect(isSelected("Home")).toBe(true);
 
     fireEvent.click(tab("Model & method"));
-    expect([tab("Patient analysis").tabIndex, tab("Model & method").tabIndex]).toEqual([-1, 0]);
+    expect(order()).toEqual([-1, -1, -1, -1, 0]);
     expect(tab("Model & method").getAttribute("aria-controls")).toBe(screen.getByRole("tabpanel").id);
-    expect(tab("Patient analysis").getAttribute("aria-controls")).toBeNull();
+    expect(tab("Home").getAttribute("aria-controls")).toBeNull();
+  });
+
+  it("gives each page its own address and follows the browser's Back button", async () => {
+    await bootHome();
+    expect(window.location.hash).toBe("");
+
+    fireEvent.click(tab("Patients"));
+    expect(window.location.hash).toBe("#patients");
+    fireEvent.click(tab("Model & method"));
+    expect(window.location.hash).toBe("#method");
+
+    // Back: the address changes first, then the page follows it.
+    window.history.replaceState(null, "", "#patients");
+    fireEvent(window, new HashChangeEvent("hashchange"));
+    expect(isSelected("Patients")).toBe(true);
+
+    // An address that names no page shows the page the app opens on.
+    window.history.replaceState(null, "", "#nowhere");
+    fireEvent(window, new HashChangeEvent("hashchange"));
+    expect(isSelected("Home")).toBe(true);
+  });
+
+  it("switches between the light and the dark theme, starting from the system's", () => {
+    mockApi();
+    render(<App />);
+    expect(document.documentElement.dataset.theme).toBe("light");
+
+    fireEvent.click(screen.getByRole("button", { name: "Switch to the dark theme" }));
+    expect(document.documentElement.dataset.theme).toBe("dark");
+
+    fireEvent.click(screen.getByRole("button", { name: "Switch to the light theme" }));
+    expect(document.documentElement.dataset.theme).toBe("light");
+    expect(disclaimer()).toBe(DISCLAIMER_TEXT);
+  });
+
+  it("starts in the dark theme where the system is dark", () => {
+    vi.stubGlobal("matchMedia", (query: string) => ({
+      matches: true,
+      media: query,
+      addEventListener: () => undefined,
+      removeEventListener: () => undefined,
+    }));
+    mockApi();
+    render(<App />);
+
+    expect(document.documentElement.dataset.theme).toBe("dark");
+    expect(screen.getByRole("button", { name: "Switch to the light theme" })).toBeTruthy();
+  });
+
+  it("opens on the page named in the address", () => {
+    window.history.replaceState(null, "", "#new");
+    mockApi();
+    render(<App />);
+
+    expect(isSelected("New patient")).toBe(true);
   });
 });
 
 describe("App boot (PRODUCT_SPEC §6.1)", () => {
-  it("shows a loading state, then loads the first sample and its estimates (UF-1)", async () => {
+  it("shows a loading state, then opens Home and analyses the first sample behind it (UF-1)", async () => {
     const { predicted } = mockApi();
     render(<App />);
     expect(screen.getByRole("status", { name: "Loading the model service…" })).toBeTruthy();
     expect(screen.queryByRole("button", { name: "Reset demo" })).toBeNull();
+    expect(screen.queryByRole("button", { name: "Take the tour" })).toBeNull();
 
-    const cad = await screen.findByRole("button", { name: /Coronary artery disease/ });
+    // Home is on screen; the first sample is analysed without being asked for.
+    expect(await screen.findByRole("heading", { name: HOME_TITLE })).toBeTruthy();
+    expect(isSelected("Home")).toBe(true);
+    expect(await screen.findByText("Sample A: each artery is coloured by its model estimate. Drag to turn the heart.")).toBeTruthy();
+    expect(predicted()).toEqual([SAMPLES[0].features]);
+
+    fireEvent.click(tab("Analysis"));
+    const cad = screen.getByRole("button", { name: /Coronary artery disease/ });
     expect(cad.textContent).toContain("81%");
     expect(pressed(cad)).toBe(true);
-    expect(pressed(screen.getByRole("button", { name: /Sample A/ }))).toBe(true);
+    expect(patientCard()).toContain("Sample A60 y · MaleHeld out — not used for training or validation.");
     expect(screen.getByRole("region", { name: "Why this estimate: CAD" })).toBeTruthy();
-    expect(screen.getByText(/Model version 20261007T1423Z-7393432/)).toBeTruthy();
+    expect(screen.getByText(/Model version 20261011T1756Z-7393432/)).toBeTruthy();
     expect(predicted()).toEqual([SAMPLES[0].features]);
   });
 
@@ -166,7 +269,7 @@ describe("App boot (PRODUCT_SPEC §6.1)", () => {
 
     reachable = true;
     fireEvent.click(within(alert).getByRole("button", { name: "Retry" }));
-    expect(await screen.findByRole("button", { name: /Coronary artery disease/ })).toBeTruthy();
+    expect(await screen.findByRole("heading", { name: HOME_TITLE })).toBeTruthy();
     expect(screen.queryByRole("alert")).toBeNull();
   });
 
@@ -252,7 +355,7 @@ describe("end to end with a mocked API (T7.1)", () => {
     const highlighted = (row: Element) => row.className.split(" ").includes("border-brand");
 
     fireEvent.mouseEnter(listRow(/^RCA/));
-    expect(arteryOutline(/^RCA/)).toBe("#0369a1");
+    expect(arteryOutline(/^RCA/)).toBe("#15803d");
     expect(arteryOutline(/^LAD/)).toBeNull();
     fireEvent.mouseLeave(listRow(/^RCA/));
     expect(arteryOutline(/^RCA/)).toBeNull();
@@ -300,26 +403,28 @@ describe("end to end with a mocked API (T7.1)", () => {
     expect(screen.queryByText("Out of date — fix highlighted fields")).toBeNull();
   });
 
-  it("predicts again when another patient is loaded", async () => {
+  it("opens the analysis of the sample chosen on the Patients page, and predicts for it", async () => {
     const { predicted } = await boot();
 
-    fireEvent.click(screen.getByRole("button", { name: /Sample B/ }));
+    chooseSample("Sample B");
 
+    expect(isSelected("Analysis")).toBe(true);
+    expect(window.location.hash).toBe("#analysis");
     await waitFor(() => expect(predicted()).toHaveLength(2));
     expect(predicted()[1]).toEqual(SAMPLES[1].features);
-    await waitFor(() => expect(pressed(screen.getByRole("button", { name: /Sample B/ }))).toBe(true));
+    expect(patientCard()).toContain("Sample B71 y · Female");
     expect(ageInput().value).toBe("71");
     await waitFor(() => expect(arteryColor(/^LAD/)).toBe(riskColor(0.9)));
   });
 
-  it("keeps the loaded patient and the selection when switching tabs", async () => {
+  it("keeps the loaded patient and the selection when switching pages", async () => {
     const { predicted } = await boot();
     fireEvent.click(listRow(/^LAD/));
 
-    fireEvent.click(tab("Model & method"));
-    fireEvent.click(tab("Patient analysis"));
+    for (const page of ["Model & method", "Patients", "New patient", "Analysis"]) fireEvent.click(tab(page));
 
     expect(pressed(listRow(/^LAD/))).toBe(true);
+    expect(patientCard()).toContain("Sample A");
     expect(predicted()).toHaveLength(1);
   });
 
@@ -331,6 +436,7 @@ describe("end to end with a mocked API (T7.1)", () => {
           ? jsonResponse({ error: { code: "INTERNAL_ERROR", message: "Something went wrong on the server." } }, 500)
           : estimate(init),
     });
+    window.history.replaceState(null, "", "#analysis");
     render(<App />);
 
     const alert = await screen.findByRole("alert");
@@ -345,18 +451,18 @@ describe("end to end with a mocked API (T7.1)", () => {
     expect(arteryColor(/^LAD/)).toBe(riskColor(0.581));
   });
 
-  it("Reset demo returns to the first sample, CAD and the analysis tab", async () => {
+  it("Reset demo returns to the first sample, CAD and the Analysis page", async () => {
     const { predicted } = await boot();
-    fireEvent.click(screen.getByRole("button", { name: /Sample B/ }));
-    await waitFor(() => expect(pressed(screen.getByRole("button", { name: /Sample B/ }))).toBe(true));
+    chooseSample("Sample B");
+    await waitFor(() => expect(patientCard()).toContain("Sample B"));
     fireEvent.click(listRow(/^LCX/));
     fireEvent.change(ageInput(), { target: { value: "80" } });
     fireEvent.click(tab("Model & method"));
 
     fireEvent.click(screen.getByRole("button", { name: "Reset demo" }));
 
-    expect(isSelected("Patient analysis")).toBe(true);
-    expect(pressed(screen.getByRole("button", { name: /Sample A/ }))).toBe(true);
+    expect(isSelected("Analysis")).toBe(true);
+    await waitFor(() => expect(patientCard()).toContain("Sample A"));
     expect(pressed(cadCard())).toBe(true);
     expect(ageInput().value).toBe("60");
     await waitFor(() => expect(listRow(/^LAD/).textContent).toContain("58%"));
@@ -460,17 +566,19 @@ describe("ground-truth reveal end to end (T8.2)", () => {
     expect(truth("lcx")).toBe("Dataset label: Stenotic ✗ (differs from the model's prediction)");
   });
 
-  it("has nothing to reveal for typical values, and shows each sample its own labels", async () => {
+  it("has nothing to reveal for a patient of the user's own, and shows each sample its own labels", async () => {
     await boot();
     fireEvent.click(truthToggle());
 
-    fireEvent.click(screen.getByRole("button", { name: "Start from typical values" }));
+    fireEvent.click(tab("New patient"));
+    fireEvent.click(screen.getByRole("button", { name: "Analyse this patient" }));
+    expect(isSelected("Analysis")).toBe(true);
     expect(truthToggle().disabled).toBe(true);
     expect(document.querySelector("[data-truth]")).toBeNull();
     expect(screen.getByText("Only sample patients have a dataset label to compare with.")).toBeTruthy();
 
     // Sample B (CAD and LCX positive); at its age the mocked model predicts CAD and LAD.
-    fireEvent.click(screen.getByRole("button", { name: /Sample B/ }));
+    chooseSample("Sample B");
     await waitFor(() => expect(truth("lad")).toBe("Dataset label: Normal ✗ (differs from the model's prediction)"));
     expect(truth("cad")).toBe("Dataset label: CAD ✓ (matches the model's prediction)");
     expect(truth("lcx")).toBe("Dataset label: Stenotic ✗ (differs from the model's prediction)");
@@ -503,7 +611,7 @@ describe("Model & method tab end to end (T8.3)", () => {
 
     const cad = within(await overview()).getByRole("row", { name: /^CAD/ });
     expect(within(cad).getAllByRole("cell").map((cell) => cell.textContent)).toEqual([
-      "Logistic regression", "212 / 85", "0.917 ± 0.031", "0.857 ± 0.031", "0.897 ± 0.031", "0.887 ± 0.031",
+      "Logistic regression", "210 / 81", "0.917 ± 0.031", "0.857 ± 0.031", "0.897 ± 0.031", "0.887 ± 0.031",
       "0.767 ± 0.031", "0.897 ± 0.031", "0.957 ± 0.031", "0.083 ± 0.031",
     ]);
     expect(screen.getByRole("img", { name: /^ROC curves for CAD/ }).getAttribute("src")).toBe(
@@ -513,7 +621,7 @@ describe("Model & method tab end to end (T8.3)", () => {
     expect(disclaimer()).toBe(DISCLAIMER_TEXT);
     expect(calls("/api/metrics")).toHaveLength(1);
 
-    fireEvent.click(tab("Patient analysis"));
+    fireEvent.click(tab("Analysis"));
     fireEvent.click(tab("Model & method"));
     expect(await overview()).toBeTruthy();
     expect(calls("/api/metrics")).toHaveLength(1);
@@ -539,8 +647,263 @@ describe("Model & method tab end to end (T8.3)", () => {
     expect(screen.queryByRole("alert")).toBeNull();
     expect(calls("/api/metrics")).toHaveLength(2);
 
-    fireEvent.click(tab("Patient analysis"));
+    fireEvent.click(tab("Analysis"));
     expect(listRow(/^LAD/).textContent).toContain("58%");
     expect(predicted()).toHaveLength(1);
+  });
+});
+
+describe("the Patients and New patient pages end to end (F1, F2)", () => {
+  it("shows the sample patients in two groups by their dataset label, the one in analysis marked", async () => {
+    await boot();
+    fireEvent.click(tab("Patients"));
+
+    const group = (name: RegExp) => screen.getByRole("region", { name });
+    const cards = (name: RegExp) => within(group(name)).getAllByRole("button").map((card) => card.getAttribute("aria-label"));
+    expect(cards(/^Dataset label: CAD/)).toEqual(["Analyse Sample A, 60 y · Male", "Analyse Sample B, 71 y · Female"]);
+    expect(cards(/^Dataset label: Normal/)).toEqual(["Analyse Sample C, 45 y · Female"]);
+    expect(screen.getByRole("button", { name: /^Analyse Sample A,/ }).getAttribute("aria-current")).toBe("true");
+    expect(screen.getByRole("button", { name: /^Analyse Sample C,/ }).getAttribute("aria-current")).toBeNull();
+  });
+
+  it("analyses a patient without disease and compares it with its dataset labels", async () => {
+    const { predicted } = await boot({
+      "/api/predict": (init) => jsonResponse(predictResponse(featuresOf(init), { cad: 0.12, lad: 0.2, lcx: 0.08, rca: 0.31 })),
+    });
+
+    chooseSample("Sample C");
+
+    await waitFor(() => expect(patientCard()).toContain("Sample C45 y · Female"));
+    await waitFor(() => expect(cadCard().textContent).toContain("12%"));
+    expect(cadCard().textContent).toContain("CAD not predicted");
+    expect(predicted().at(-1)).toEqual(SAMPLES[2].features);
+    fireEvent.click(truthToggle());
+    expect(truth("cad")).toBe("Dataset label: Normal ✓ (matches the model's prediction)");
+    expect(screen.getByText("The model's prediction matches the dataset label for 4 of 4 targets.")).toBeTruthy();
+  });
+
+  it("analyses a patient of the user's own: typical values, edited, sent once", async () => {
+    const { predicted } = await boot();
+    fireEvent.click(tab("New patient"));
+    const own = within(screen.getByRole("group", { name: "Demographics & history" }));
+
+    fireEvent.change(own.getByLabelText(/^Age/), { target: { value: "72" } });
+    // Nothing is sent while the patient is being entered.
+    await pause(500);
+    expect(predicted()).toHaveLength(1);
+
+    fireEvent.click(screen.getByRole("button", { name: "Analyse this patient" }));
+
+    expect(isSelected("Analysis")).toBe(true);
+    await waitFor(() => expect(predicted()).toHaveLength(2));
+    const typical = Object.fromEntries(META.features.map((feature) => [feature.id, feature.default]));
+    expect(predicted()[1]).toEqual({ ...typical, age: 72 });
+    expect(patientCard()).toContain("Your patient72 y · Male");
+    expect(screen.queryByText(/^Modified/)).toBeNull();
+    // From 70 years on the mocked model raises the LAD estimate.
+    await waitFor(() => expect(listRow(/^LAD/).textContent).toContain("90%"));
+  });
+
+  it("does not analyse a new patient with an invalid value", async () => {
+    const { predicted } = await boot();
+    fireEvent.click(tab("New patient"));
+    const own = within(screen.getByRole("group", { name: "Demographics & history" }));
+
+    fireEvent.change(own.getByLabelText(/^Age/), { target: { value: "200" } });
+
+    const analyse = screen.getByRole("button", { name: "Analyse this patient" }) as HTMLButtonElement;
+    expect(analyse.disabled).toBe(true);
+    expect(screen.getByRole("alert").textContent).toBe("1 field needs attention before the patient can be analysed.");
+    expect(own.getByText("Must be between 30 and 86 (range seen in the dataset).")).toBeTruthy();
+    fireEvent.click(analyse);
+    expect(isSelected("New patient")).toBe(true);
+    expect(predicted()).toHaveLength(1);
+  });
+
+  it("builds a page when it is first opened, and keeps a half-entered patient across pages", async () => {
+    await boot();
+    expect(document.getElementById("new-age")).toBeNull();
+    expect(screen.queryByRole("button", { name: /^Analyse Sample A,/ })).toBeNull();
+
+    fireEvent.click(tab("New patient"));
+    const age = () => document.getElementById("new-age") as HTMLInputElement;
+    fireEvent.change(age(), { target: { value: "77" } });
+    for (const page of ["Patients", "Analysis", "Model & method", "New patient"]) fireEvent.click(tab(page));
+
+    expect(age().value).toBe("77");
+    // The patient in analysis is still the first sample: nothing was sent for the half-entered one.
+    fireEvent.click(tab("Analysis"));
+    expect(ageInput().value).toBe("60");
+  });
+
+  it("leads from the analysis to the two pages where a patient is chosen", async () => {
+    await boot();
+
+    fireEvent.click(screen.getByRole("button", { name: "Choose another patient" }));
+    expect(isSelected("Patients")).toBe(true);
+
+    fireEvent.click(screen.getByRole("button", { name: "New patient" }));
+    expect(isSelected("New patient")).toBe(true);
+  });
+});
+
+describe("Home page end to end", () => {
+  it("leads into the app: the analysis, the three other pages", async () => {
+    await bootHome();
+
+    fireEvent.click(screen.getByRole("button", { name: "Open the analysis" }));
+    expect(isSelected("Analysis")).toBe(true);
+    expect(window.location.hash).toBe("#analysis");
+    expect(patientCard()).toContain("Sample A");
+
+    for (const [way, page] of [
+      [/^Explore the sample patients/, "Patients"],
+      [/^Enter a patient of your own/, "New patient"],
+      [/^See how it was validated/, "Model & method"],
+    ] as const) {
+      fireEvent.click(tab("Home"));
+      fireEvent.click(screen.getByRole("button", { name: way }));
+      expect(isSelected(page)).toBe(true);
+    }
+  });
+
+  it("names the patient in analysis, also after another one was chosen", async () => {
+    await bootHome();
+    expect(await screen.findByText(/^Sample A: each artery is coloured by its model estimate/)).toBeTruthy();
+
+    chooseSample("Sample B");
+    fireEvent.click(tab("Home"));
+
+    expect(await screen.findByText(/^Sample B: each artery is coloured by its model estimate/)).toBeTruthy();
+  });
+
+  it("builds the Analysis page only when it is opened, with the estimates that are already there", async () => {
+    const { predicted } = await bootHome();
+    await waitFor(() => expect(predicted()).toHaveLength(1));
+    expect(screen.queryByRole("heading", { name: "Patient" })).toBeNull();
+
+    fireEvent.click(tab("Analysis"));
+
+    expect(cadCard().textContent).toContain("81%");
+    expect(predicted()).toHaveLength(1);
+  });
+});
+
+describe("guided tour end to end", () => {
+  const tourNote = () => screen.queryByRole("dialog", { name: "Guided tour" });
+
+  it("starts from the header on any page and opens the Analysis page for it", async () => {
+    await bootHome();
+    fireEvent.click(tab("Model & method"));
+
+    fireEvent.click(screen.getByRole("button", { name: "Take the tour" }));
+
+    expect(isSelected("Analysis")).toBe(true);
+    expect(tourNote()!.textContent).toContain("Step 1 of 6");
+    expect(within(tourNote()!).getByRole("heading").textContent).toBe("The patient");
+  });
+
+  it("starts from the Home page as well, and ends with Finish", async () => {
+    await bootHome();
+
+    fireEvent.click(within(screen.getByRole("tabpanel")).getByRole("button", { name: "Take the tour" }));
+    expect(isSelected("Analysis")).toBe(true);
+    for (let step = 1; step < 6; step += 1) fireEvent.click(within(tourNote()!).getByRole("button", { name: "Next" }));
+    expect(within(tourNote()!).getByRole("heading").textContent).toBe("Compare with angiography");
+
+    fireEvent.click(within(tourNote()!).getByRole("button", { name: "Finish" }));
+    expect(tourNote()).toBeNull();
+    // The page it explained is as it was.
+    expect(pressed(cadCard())).toBe(true);
+    expect(patientCard()).toContain("Sample A");
+  });
+
+  it("every part it points at is on the Analysis page", async () => {
+    await boot();
+
+    for (const part of ["patient", "heart", "estimates", "explanation", "whatif", "labels"]) {
+      expect(document.querySelector(`[data-tour="${part}"]`), part).toBeTruthy();
+    }
+  });
+
+  it("ends when the page is left, and does not come back with it", async () => {
+    await boot();
+    fireEvent.click(screen.getByRole("button", { name: "Take the tour" }));
+    expect(tourNote()).toBeTruthy();
+
+    // The browser's Back button: the address changes, the page follows.
+    window.history.replaceState(null, "", "#patients");
+    fireEvent(window, new HashChangeEvent("hashchange"));
+    expect(tourNote()).toBeNull();
+
+    fireEvent.click(tab("Analysis"));
+    expect(tourNote()).toBeNull();
+  });
+
+  it("is not offered before the app has loaded", () => {
+    mockApi({ "/api/meta": () => new Promise<Response>(() => undefined) });
+    render(<App />);
+
+    expect(screen.queryByRole("button", { name: "Take the tour" })).toBeNull();
+    expect(screen.getByRole("button", { name: "Switch to the dark theme" })).toBeTruthy();
+  });
+});
+
+describe("the models' estimates on the patient cards end to end", () => {
+  const estimate = (id: string) => document.querySelector<HTMLElement>(`[data-estimate="${id}"]`);
+
+  it("asks for them when the Patients page is first opened, once, apart from the analysis", async () => {
+    const { predicted, estimated } = await boot();
+    expect(estimated()).toHaveLength(0);
+
+    fireEvent.click(tab("Patients"));
+    expect(screen.getByRole("status").textContent).toBe("Loading the models' estimates…");
+    await waitFor(() => expect(estimate("sample-c")).toBeTruthy());
+
+    expect(estimated()).toEqual(SAMPLES.map((sample) => sample.features));
+    // Sample B is 71: the mocked model puts its LAD at 90%.
+    expect(estimate("sample-a")!.textContent).toBe("81%CAD estimateLAD58%LCX22%RCA44%");
+    expect(estimate("sample-b")!.textContent).toBe("81%CAD estimateLAD90%LCX22%RCA44%");
+    expect(await screen.findByText(/^Ring and bars: the models' estimates for the patient\./)).toBeTruthy();
+    expect(predicted()).toHaveLength(1);
+
+    for (const page of ["Analysis", "Patients", "Home", "Patients"]) fireEvent.click(tab(page));
+    expect(estimated()).toHaveLength(SAMPLES.length);
+  });
+
+  it("opens every patient even when the estimates cannot be loaded, and loads them on Retry", async () => {
+    let failing = true;
+    const { predicted, estimated } = await boot({
+      "/api/predict": (init) =>
+        failing && (init as { priority?: string }).priority === "low"
+          ? jsonResponse({ error: { code: "INTERNAL_ERROR", message: "Something went wrong on the server." } }, 500)
+          : mockedEstimate(init),
+    });
+
+    fireEvent.click(tab("Patients"));
+    const alert = await screen.findByRole("alert");
+    expect(alert.textContent).toContain("The models' estimates could not be loaded.");
+    expect(estimate("sample-a")).toBeNull();
+
+    failing = false;
+    fireEvent.click(within(alert).getByRole("button", { name: "Retry" }));
+    await waitFor(() => expect(estimate("sample-c")).toBeTruthy());
+    expect(screen.queryByRole("alert")).toBeNull();
+    expect(estimated().length).toBeGreaterThan(SAMPLES.length);
+
+    fireEvent.click(screen.getByRole("button", { name: /^Analyse Sample C,/ }));
+    await waitFor(() => expect(predicted()).toHaveLength(2));
+    expect(patientCard()).toContain("Sample C");
+  });
+
+  it("shows one group of patients when asked", async () => {
+    await boot();
+    fireEvent.click(tab("Patients"));
+
+    fireEvent.click(screen.getByRole("button", { name: /^Dataset label: Normal · 1$/ }));
+
+    expect(screen.getAllByRole("button", { name: /^Analyse Sample/ }).map((card) => card.getAttribute("aria-label"))).toEqual([
+      "Analyse Sample C, 45 y · Female",
+    ]);
   });
 });

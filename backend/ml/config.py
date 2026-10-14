@@ -37,8 +37,10 @@ RISK_LEVELS = (
     {"id": "high", "label": "High", "min": 0.65, "max": 1.0},
 )
 
-# Held-out sample patients (DATA_MODEL §5.3): number of stenotic vessels wanted per slot, A to F.
-HOLDOUT_SLOTS = (3, 2, 1, 1, 0, 0)
+# Held-out sample patients (DATA_MODEL §5.3): number of stenotic vessels wanted per slot, A to L.
+# Six with coronary artery disease and six without. The first six slots are the original six
+# samples; the rule picks slot by slot, so adding slots after them left those patients unchanged.
+HOLDOUT_SLOTS = (3, 2, 1, 1, 0, 0, 2, 1, 0, 0, 0, 0)
 HOLDOUT_NOTE = "Held out — not used for training or validation."
 
 

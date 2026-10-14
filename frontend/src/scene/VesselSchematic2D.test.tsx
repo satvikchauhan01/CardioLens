@@ -77,20 +77,37 @@ describe("2D vessel schematic (F11)", () => {
 
   it("marks the selected artery and outlines the selected or hovered one", () => {
     renderSchematic({ selected: "rca", hovered: "lad" });
-    // An artery that is neither selected nor hovered has its dark edge under every run.
+    // An artery that is neither selected nor hovered has its rim, in its own colour, under every run.
     const edges = (element: Element) => Array.from(element.querySelectorAll("path[data-edge]"));
     expect(edges(vessel(/^LCX/)).length).toBe(vessel(/^LCX/).querySelectorAll("path[data-run]").length);
-    expect(new Set(edges(vessel(/^LCX/)).map((path) => path.getAttribute("stroke")))).toEqual(new Set(["#3b141c"]));
+    expect(new Set(edges(vessel(/^LCX/)).map((path) => path.getAttribute("stroke")))).toEqual(new Set(["#a21caf"]));
     expect(edges(vessel(/^RCA/))).toHaveLength(0);
     expect(edges(vessel(/^LAD/))).toHaveLength(0);
 
-    const outline = (element: Element) => element.querySelector('path[stroke="#0f172a"], path[stroke="#0369a1"]');
+    // The wide line under a selected artery is the page's ink; under a hovered one, its own colour.
+    const outline = (element: Element) =>
+      Array.from(element.querySelectorAll("path")).find((path) => path.getAttribute("stroke") !== "transparent" && !path.hasAttribute("data-run"));
 
     expect(vessel(/^RCA/).getAttribute("aria-pressed")).toBe("true");
     expect(vessel(/^LAD/).getAttribute("aria-pressed")).toBe("false");
     expect(outline(vessel(/^RCA/))?.getAttribute("stroke")).toBe("#0f172a");
-    expect(outline(vessel(/^LAD/))?.getAttribute("stroke")).toBe("#0369a1");
-    expect(outline(vessel(/^LCX/))).toBeNull();
+    expect(outline(vessel(/^LAD/))?.getAttribute("stroke")).toBe("#2563eb");
+    expect(outline(vessel(/^LCX/))?.getAttribute("data-edge")).toBe("");
+  });
+
+  it("gives each artery its own rim colour, and the same colour beside its label", () => {
+    renderSchematic();
+    const rim = (element: Element) => new Set(Array.from(element.querySelectorAll("path[data-edge]")).map((path) => path.getAttribute("stroke")));
+    const swatch = (element: Element) => element.querySelector("[data-rim-swatch]")?.getAttribute("fill");
+
+    expect(rim(vessel(/^LAD/))).toEqual(new Set(["#2563eb"]));
+    expect(rim(vessel(/^LCX/))).toEqual(new Set(["#a21caf"]));
+    expect(rim(vessel(/^RCA/))).toEqual(new Set(["#15803d"]));
+    expect(swatch(vessel(/^LAD/))).toBe("#2563eb");
+    expect(swatch(vessel(/^LCX/))).toBe("#a21caf");
+    expect(swatch(vessel(/^RCA/))).toBe("#15803d");
+    // The colour inside is still the estimate, whatever the rim is.
+    expect(new Set(strokes(vessel(/^LAD/)))).not.toContain("#2563eb");
   });
 
   it("reports hover and focus so the list can highlight the same artery", () => {

@@ -61,7 +61,8 @@ describe("results panel (F4)", () => {
 
     expect(row(/Coronary artery disease/).textContent).toContain("50%");
     expect(row(/Coronary artery disease/).textContent).toContain("CAD predicted");
-    expect(row(/^LAD/).textContent).toBe("LAD · Left Anterior Descending50%Stenosis not predictedModerate");
+    // Just under the threshold: never shown as 50% beside "not predicted" (BR-14).
+    expect(row(/^LAD/).textContent).toBe("LAD · Left Anterior Descending49%Stenosis not predictedModerate");
     expect(row(/^LCX/).textContent).toBe("LCX · Left Circumflex35%Stenosis not predictedModerate");
     expect(row(/^RCA/).textContent).toBe("RCA · Right Coronary Artery65%Stenosis predictedHigh");
   });
@@ -104,12 +105,24 @@ describe("results panel (F4)", () => {
     expect(onSelectTarget).toHaveBeenLastCalledWith("cad");
   });
 
+  it("marks the decision threshold on the gauge without adding to what the card says", () => {
+    renderPanel(ready(predictResponse()));
+    const card = row(/Coronary artery disease/);
+
+    expect(card.querySelector("[data-mark]")!.getAttribute("data-mark")).toBe("50%");
+    expect(card.textContent).toBe("Coronary artery disease81%CAD predictedHigh");
+    // The drawing is for the eye only; the estimate is the text.
+    expect(card.querySelector("svg")!.getAttribute("aria-hidden")).toBe("true");
+  });
+
   it("colours each bar from the shared risk scale and fills it to the estimate", () => {
     renderPanel(ready(predictResponse()));
     const bar = (target: string) => document.querySelector<HTMLElement>(`[data-risk-bar="${target}"]`)!;
     const cssColor = (hex: string) => `rgb(${[1, 3, 5].map((i) => parseInt(hex.slice(i, i + 2), 16)).join(", ")})`;
 
-    expect(bar("cad").style.backgroundColor).toBe(cssColor(riskColor(0.8123)));
+    // The overall estimate is a gauge: its arc has the risk colour and is drawn to the estimate.
+    expect(bar("cad").getAttribute("stroke")).toBe(riskColor(0.8123));
+    expect(bar("cad").getAttribute("stroke-dasharray")).toBe("81 100");
     expect(bar("lad").style.backgroundColor).toBe(cssColor(riskColor(0.581)));
     expect(bar("lcx").style.width).toBe("22%");
     expect(bar("rca").style.width).toBe("44%");
@@ -145,7 +158,7 @@ describe("results panel (F4)", () => {
   it("shows a hint when no patient is loaded", () => {
     renderPanel(initialAnalysisState);
 
-    expect(screen.getByText("Choose a sample patient or start from typical values.")).toBeTruthy();
+    expect(screen.getByText("Choose a sample patient or enter a patient of your own.")).toBeTruthy();
     expect(screen.queryByRole("button")).toBeNull();
   });
 
@@ -339,7 +352,7 @@ describe("ground-truth reveal (F8, BR-11)", () => {
   });
 
   it("has nothing to reveal for a patient that is not a sample", () => {
-    renderReveal({ ...ready(predictResponse()), source: "typical", sampleId: null }, null, true);
+    renderReveal({ ...ready(predictResponse()), source: "custom", sampleId: null }, null, true);
 
     expect(document.querySelector("[data-truth]")).toBeNull();
     expect(toggle().disabled).toBe(true);
@@ -423,5 +436,19 @@ describe("explanation panel (F6)", () => {
       "Logistic regression · SHAP contributions",
     );
     expect(labels()[0]).toBe("Diabetes mellitus");
+  });
+});
+
+describe("results panel: the rim colour of each artery", () => {
+  it("marks each artery's row with its rim colour, and the CAD card with none", () => {
+    renderPanel(ready(predictResponse()));
+    const swatch = (id: string) => document.querySelector<HTMLElement>(`[data-rim-swatch="${id}"]`)?.style.backgroundColor;
+
+    expect(swatch("lad")).toBe("rgb(37, 99, 235)");
+    expect(swatch("lcx")).toBe("rgb(162, 28, 175)");
+    expect(swatch("rca")).toBe("rgb(21, 128, 61)");
+    expect(swatch("cad")).toBeUndefined();
+    // It is decoration: the row's words are unchanged.
+    expect(document.querySelector('[data-rim-swatch="lad"]')!.getAttribute("aria-hidden")).toBe("true");
   });
 });

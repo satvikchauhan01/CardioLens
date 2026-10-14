@@ -89,6 +89,12 @@ const save = (name, result) => {
   console.log("wrote", name);
 };
 const shoot = async (name) => save(name, await send("Page.captureScreenshot", { format: "png" }));
+/** Screenshot of the whole page, also the part below the window. */
+const shootPage = async (name) => {
+  const height = await evaluate("document.documentElement.scrollHeight");
+  const clip = { x: 0, y: 0, width: 1366, height, scale: 1 };
+  save(name, await send("Page.captureScreenshot", { format: "png", clip, captureBeyondViewport: true }));
+};
 /** Screenshot of one element (a JS expression), down to the bottom of `bottomOf` if given, wherever it is on the page. */
 const shootElement = async (name, expression, bottomOf = null, margin = 6) => {
   const end = bottomOf ? `(${bottomOf}).getBoundingClientRect().bottom` : "r.bottom";
@@ -101,6 +107,9 @@ const shootElement = async (name, expression, bottomOf = null, margin = 6) => {
 const click = (expression) => evaluate(`(${expression}).click()`);
 const button = (text) => `Array.from(document.querySelectorAll('button')).find((b) => b.textContent.startsWith(${JSON.stringify(text)}))`;
 const row = (id) => `document.querySelector('[data-risk-bar="${id}"]').closest('button')`;
+const tab = (id) => `document.getElementById('tab-${id}')`;
+const sampleCard = (title) => `Array.from(document.querySelectorAll('button[aria-label]')).find((b) => b.getAttribute('aria-label').startsWith('Analyse ${title},'))`;
+const PATIENT = "Array.from(document.querySelectorAll('h2')).find((h) => h.textContent === 'Patient').closest('section').textContent";
 
 const VIEWER = "document.querySelector('canvas').closest('section')";
 const RESULTS = `${row("cad")}.closest('section')`;
@@ -108,35 +117,74 @@ const TRUTH_TOGGLE = "document.getElementById('ground-truth-toggle')";
 const TRUTH_BOX = `${TRUTH_TOGGLE}.closest('div')`;
 const EXPLANATION = "Array.from(document.querySelectorAll('h3')).find((h) => h.textContent.startsWith('Why this estimate')).closest('section')";
 const HEART_DRAWN = "Array.from(document.querySelectorAll('[data-label]')).some((l) => l.style.opacity === '1')";
+const RESET_VIEW = "Array.from(document.querySelectorAll('button')).find((b) => b.getAttribute('aria-label') === 'Back to the starting view')";
 
 await send("Page.enable");
 await send("Runtime.enable");
 await send("Emulation.setDeviceMetricsOverride", { width: 1366, height: 768, deviceScaleFactor: 2, mobile: false });
+// The figures are taken in the light theme, whatever the system of this machine is set to.
+await send("Emulation.setEmulatedMedia", { features: [{ name: "prefers-color-scheme", value: "light" }] });
 await send("Page.navigate", { url: APP_URL });
-await until("!!document.querySelector('[data-risk-bar]')", "the first estimates");
+
+// The Home page, with its turning heart in the colours of Sample A's estimates.
+await until("/^Sample A/.test(document.querySelector('figcaption')?.textContent ?? '')", "the first estimates");
+await until("Array.from(document.querySelectorAll('[data-hero-label]')).some((l) => l.style.opacity === '1')", "the heart on Home");
+await sleep(1200);
+await shootPage("home_page.png");
+
+// The Analysis page. The heart turns by itself on arrival; asking for a view stops it there.
+await click(tab("analysis"));
+await until("!!document.querySelector('[data-risk-bar]')", "the estimates");
 await until(HEART_DRAWN, "the 3D heart");
-await sleep(900);
+await click(RESET_VIEW);
+await sleep(1200);
 await shoot("app_overview.png");
 
 // What-if on Sample A: typical chest pain switched off.
 await click("document.getElementById('quick-typical_chest_pain')");
 await until("!!document.querySelector('[data-delta]')", "the what-if differences");
-await sleep(1000);
+await sleep(1200);
 await shoot("app_what_if.png");
 await click(button("Reset to original"));
 await sleep(300);
 
-// Sample D with the dataset labels: the model is wrong for two vessels. The LAD is selected.
-await click(button("Sample D"));
-await until("document.querySelector('button[aria-pressed=true]').textContent.startsWith('Sample D') && !document.querySelector('.opacity-60')", "Sample D");
+// The Patients page: the twelve held-out patients in their two groups, with the models' estimates.
+await click(tab("patients"));
+await until(`!!${sampleCard("Sample L")}`, "the Patients page");
+await until("document.querySelectorAll('[data-estimate]').length === 12", "the estimates on the cards");
+await sleep(400);
+await shootPage("patients_page.png");
+
+// Sample B with the dataset labels: the model misses one vessel. The LAD is selected.
+await click(sampleCard("Sample B"));
+await until(`${PATIENT}.includes('Sample B') && !document.querySelector('.opacity-60')`, "Sample B");
 await sleep(600);
 await click(TRUTH_TOGGLE);
 await until("document.querySelectorAll('[data-truth]').length === 4", "the dataset labels");
 await click(row("lad"));
 await sleep(1500);
-await shootElement("viewer_sample_d_lad.png", VIEWER);
-await shootElement("ground_truth_sample_d_lad.png", RESULTS, TRUTH_BOX);
-await shootElement("explanation_sample_d_lad.png", EXPLANATION);
+await shootElement("viewer_sample_b_lad.png", VIEWER);
+await shootElement("ground_truth_sample_b_lad.png", RESULTS, TRUTH_BOX);
+await shootElement("explanation_sample_b_lad.png", EXPLANATION);
+
+// A patient without coronary artery disease by the dataset's labels.
+await click(tab("patients"));
+await click(sampleCard("Sample J"));
+await until(`${PATIENT}.includes('Sample J') && !document.querySelector('.opacity-60')`, "Sample J");
+await sleep(1500);
+await evaluate("document.documentElement.scrollTop = 0");
+await shoot("app_healthy.png");
+
+// The same page in the dark theme, and one step of the guided tour.
+await click("Array.from(document.querySelectorAll('button')).find((b) => b.getAttribute('aria-label') === 'Switch to the dark theme')");
+await sleep(600);
+await shoot("app_dark.png");
+await click(button("Take the tour"));
+await sleep(600);
+await click(button("Next"));
+await sleep(1300);
+await shoot("app_tour.png");
+await click(button("Skip the tour"));
 
 // Ask the browser itself to quit: killing the process that was started here would leave its
 // helper processes running.

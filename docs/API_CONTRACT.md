@@ -115,7 +115,7 @@ interface FeatureSchema {
 {
   "model_version": "20261009T1030Z-3f2a9c1",
   "trained_at": "2026-10-09T10:30:00Z",
-  "dataset": { "name": "extention of Z-Alizadeh sani dataset", "citation": "Alizadehsani, R., Roshanzamir, M., & Sani, Z. (2013). extention of Z-Alizadeh sani dataset [Dataset]. UCI Machine Learning Repository. https://doi.org/10.24432/C5461K.", "license": "CC BY 4.0", "url": "https://archive.ics.uci.edu/dataset/411/extention+of+z+alizadeh+sani+dataset", "n_total": 303, "n_train": 297, "n_holdout": 6 },
+  "dataset": { "name": "extention of Z-Alizadeh sani dataset", "citation": "Alizadehsani, R., Roshanzamir, M., & Sani, Z. (2013). extention of Z-Alizadeh sani dataset [Dataset]. UCI Machine Learning Repository. https://doi.org/10.24432/C5461K.", "license": "CC BY 4.0", "url": "https://archive.ics.uci.edu/dataset/411/extention+of+z+alizadeh+sani+dataset", "n_total": 303, "n_train": 291, "n_holdout": 12 },
   "targets": [
     { "id": "cad", "label": "Coronary artery disease", "short_label": "CAD", "kind": "overall", "description": "At least one major coronary artery with ≥50% narrowing (dataset definition)", "model_type": "logistic_regression", "shap_units": "log_odds" },
     { "id": "lad", "label": "Left Anterior Descending", "short_label": "LAD", "kind": "vessel", "description": "Supplies the front of the heart", "model_type": "random_forest", "shap_units": "probability" }
@@ -140,10 +140,10 @@ interface FeatureSchema {
 The held-out sample patients (never used for training or CV).
 
 ```ts
-interface SamplesResponse { samples: SamplePatient[] }   // ordered A → F; A is the default
+interface SamplesResponse { samples: SamplePatient[] }   // ordered A → L; A is the default
 
 interface SamplePatient {
-  id: string;                               // "sample-a" … "sample-f"
+  id: string;                               // "sample-a" … "sample-l"
   title: string;                            // "Sample A"
   subtitle: string;                         // "61 y · Male"
   features: Record<string, FeatureValue>;   // complete, canonical values (valid for POST /api/predict)

@@ -112,12 +112,12 @@ Training is an offline CLI step, not a runtime job.
 **DF-1 App boot**
 1. Browser loads the SPA shell (3D viewer chunk is lazy-loaded in parallel).
 2. `GET /api/meta` → targets, feature schema, quick controls, thresholds, risk levels.
-3. `GET /api/samples` → 6 held-out sample patients.
+3. `GET /api/samples` → 12 held-out sample patients.
 4. Frontend loads Sample A into state → DF-2 step 3.
 5. 3D chunk finishes → `useGLTF` loads `HEART_MODEL_URL` (`/models/heart.glb`; the download starts as soon as the chunk has arrived). Nothing is drawn while it loads. Loaded: the heart, the three artery meshes and the neutral vessels are read by name. A file that cannot be loaded, or lacks a named part, is caught by the error boundary → stand-in heart with a notice. With `HEART_MODEL_URL = null` the stand-in heart is drawn directly and nothing is fetched. If the 3D scene itself fails (the chunk cannot be loaded, no graphics context can be created), the viewer shows the 2D schematic instead. An unexpected error anywhere else in a view is caught at the top of the page, which then offers to reload.
 
 **DF-2 Predict (load or edit)**
-1. User edits a field (or loads a sample/typical values/reset).
+1. User edits a field on the Analysis page (or chooses a sample on the Patients page, sends a patient from the New patient page, or resets).
 2. Edits debounce 400 ms; loads skip the debounce.
 3. Client validation (BR-13). Invalid → `input_invalid`, stop.
 4. `POST /api/predict {features}` with request id *n*.
@@ -132,7 +132,7 @@ Training is an offline CLI step, not a runtime job.
 First open → `GET /api/metrics` (cached in memory for the session) → table + `<img src="/static/plots/{target}_{kind}.png">`.
 
 **DF-5 Training (offline)**
-`python -m ml.train`: load xlsx → normalize values → drop zero-variance columns → leakage guard → select 6 held-out samples (seed 42) → build feature schema (ranges from all rows, defaults and percentile references from training rows) → for each target: repeated stratified 5×5 CV over 3 candidates + baseline → select (D-013) → fit on all training rows → SHAP global importance on training rows → write models, schema, samples, metrics, reference values, plots, manifest.
+`python -m ml.train`: load xlsx → normalize values → drop zero-variance columns → leakage guard → select 12 held-out samples (seed 42) → build feature schema (ranges from all rows, defaults and percentile references from training rows) → for each target: repeated stratified 5×5 CV over 3 candidates + baseline → select (D-013) → fit on all training rows → SHAP global importance on training rows → write models, schema, samples, metrics, reference values, plots, manifest.
 
 **DF-6 Backend startup**
 Read `manifest.json` → check installed library versions → load 4 bundles → build SHAP explainers → load schema, samples, reference values, metrics → mark ready. Any failure → not-ready (C4 failure behavior).
@@ -180,10 +180,13 @@ CardioLens/
         ├── main.tsx, App.tsx
         ├── api/        client.ts, types.ts
         ├── config/     vessels.ts, risk.ts, copy.ts
-        ├── state/      analysisReducer.ts, useAnalysis.ts, useBoot.ts, validation.ts, coherence.ts (BR-15), MetaContext.ts
-        ├── utils/      format.ts, environment.ts
-        ├── components/ layout/, patient/, results/, evaluation/, common/
-        └── scene/      ViewerPanel.tsx (DOM container) · HeartViewer.tsx (lazy WebGL scene),
+        ├── state/      analysisReducer.ts, useAnalysis.ts, useBoot.ts, validation.ts, coherence.ts (BR-15), MetaContext.ts,
+        │               useTheme.ts (light / dark), useSampleEstimates.ts (the estimates on the patient cards)
+        ├── utils/      format.ts, environment.ts, useCountUp.ts
+        ├── components/ layout/ (Header, Workspace: the five pages and the analysis they share, PatientAnalysisView),
+        │               home/ (HomeView), patients/ (PatientsView, NewPatientView), patient/ (patient card, quick controls, form),
+        │               results/ (incl. RiskGauge, AnimatedPercent), evaluation/, tour/ (Tour), common/ (incl. Icon)
+        └── scene/      ViewerPanel.tsx (DOM container) · HeroHeart.tsx (the heart on Home) · HeartViewer.tsx (lazy WebGL scene),
                         HeartModel.tsx, modelGeometry.ts, heartModelData.ts (generated),
                         Artery.tsx, useRiskMaterial.ts, colors.ts, LabelProjector.tsx, labelAnchors.ts,
                         ProxyHeart.tsx, heartShape.ts, arteryPaths.ts (stand-in heart and its paths),
@@ -192,8 +195,13 @@ CardioLens/
 
 ## 5. Frontend state
 
-- `useAnalysis` hook wraps a reducer implementing PRODUCT_SPEC §6.2: `{status, source: "sample" | "typical" | null, sampleId, loadedValues, values, fieldErrors, result, originalResult, lastGoodResult, latestRequestId, error}`.
+- `useAnalysis` hook wraps a reducer implementing PRODUCT_SPEC §6.2: `{status, source: "sample" | "custom" | null, sampleId, loadedValues, values, fieldErrors, result, originalResult, lastGoodResult, latestRequestId, error}`.
 - UI state kept separately: `selectedTarget`, `hoveredVessel`, `showGroundTruth`, `showLabels`, `activeTab`.
+- Theme (D-090): `useTheme` starts from `prefers-color-scheme`, writes `data-theme` on the root element, and stores nothing; `index.css` holds both sets of colour tokens.
+- Estimates on the patient cards (D-091): when the Patients page is first opened, `useSampleEstimates` asks `POST /api/predict` once per sample, three at a time and with the browser's `priority: "low"` hint, so the analysis of the chosen patient is never queued behind them. The endpoint and its contract are unchanged.
+- One 3D scene at a time (D-089): the heart on Home is mounted only while Home is on screen, and the Analysis page is built when first opened.
+- Guided tour (D-093): `Tour` is rendered in a portal above the page and finds its six targets by `data-tour` attributes; it reads the page and changes nothing in it.
+- Pages (D-082, D-089): `activeTab` is one of `home`, `patients`, `new`, `analysis`, `method` and is mirrored in the address (`#patients` …) with the browser's own `hashchange` event; there is no router library. `Workspace` owns the one `useAnalysis` instance, builds a page when it is first opened and keeps it mounted afterwards, so the patient in analysis, a half-entered new patient and the loaded evaluation survive a change of page. The New patient page keeps its own form values and hands them to `loadCustom` only when the user asks for the analysis.
 - No global state library; React context only for passing meta/schema down.
 
 ## 6. Extensibility (TC-2) and correspondence (TC-3)

@@ -28,7 +28,7 @@
       "max": 120,
       "step": 1,
       "categories": null,
-      "default": 74
+      "default": 73
     },
     {
       "id": "length",
@@ -851,9 +851,9 @@
     "region_rwma",
     "sex",
     "tg",
-    "ef_tte",
     "esr",
-    "dm"
+    "dm",
+    "ef_tte"
   ],
   "excluded_columns": [
     "LAD",

@@ -13,7 +13,7 @@ type Predict = (features: Record<string, FeatureValue>) => Promise<PredictRespon
 export interface Analysis {
   state: AnalysisState;
   loadSample: (sample: SamplePatient) => void;
-  loadTypical: () => void;
+  loadCustom: (values: Record<string, FeatureValue>) => void; // a patient of the user's own
   edit: (field: string, value: FormValue) => void;
   retry: () => void;
   resetToOriginal: () => void;
@@ -54,7 +54,7 @@ export function useAnalysis(features: FeatureSchema[], predict: Predict = predic
   );
 
   const load = useCallback(
-    (source: "sample" | "typical", sampleId: string | null, loaded: Record<string, FeatureValue>) => {
+    (source: "sample" | "custom", sampleId: string | null, loaded: Record<string, FeatureValue>) => {
       clearTimeout(timer.current);
       const requestId = ++sequence.current;
       values.current = loaded;
@@ -69,10 +69,7 @@ export function useAnalysis(features: FeatureSchema[], predict: Predict = predic
     [load],
   );
 
-  const loadTypical = useCallback(
-    () => load("typical", null, Object.fromEntries(features.map((f) => [f.id, f.default]))),
-    [features, load],
-  );
+  const loadCustom = useCallback((values: Record<string, FeatureValue>) => load("custom", null, values), [load]);
 
   const edit = useCallback(
     (field: string, value: FormValue) => {
@@ -111,5 +108,5 @@ export function useAnalysis(features: FeatureSchema[], predict: Predict = predic
     dispatch({ type: "RESET", requestId: ++sequence.current });
   }, [load]);
 
-  return { state, loadSample, loadTypical, edit, retry, resetToOriginal };
+  return { state, loadSample, loadCustom, edit, retry, resetToOriginal };
 }

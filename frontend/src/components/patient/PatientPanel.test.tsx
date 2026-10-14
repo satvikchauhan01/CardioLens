@@ -19,15 +19,16 @@ function loaded(overrides: Partial<AnalysisState> = {}): AnalysisState {
 
 function renderPanel(state: AnalysisState, meta = META) {
   const analysis: Analysis = {
-    state, loadSample: vi.fn(), loadTypical: vi.fn(), edit: vi.fn(), retry: vi.fn(), resetToOriginal: vi.fn(),
+    state, loadSample: vi.fn(), loadCustom: vi.fn(), edit: vi.fn(), retry: vi.fn(), resetToOriginal: vi.fn(),
   };
+  const onNavigate = vi.fn();
   const ui = (next: AnalysisState) => (
     <MetaContext.Provider value={meta}>
-      <PatientPanel samples={SAMPLES} analysis={{ ...analysis, state: next }} />
+      <PatientPanel samples={SAMPLES} analysis={{ ...analysis, state: next }} onNavigate={onNavigate} />
     </MetaContext.Provider>
   );
   const view = render(ui(state));
-  return { analysis, rerender: (next: AnalysisState) => view.rerender(ui(next)) };
+  return { analysis, onNavigate, rerender: (next: AnalysisState) => view.rerender(ui(next)) };
 }
 
 // The same input can appear twice: in the quick controls and in the full form.
@@ -36,33 +37,42 @@ const quick = () => within(screen.getByRole("group", { name: "Quick what-if cont
 const input = (label: RegExp | string) => form().getByLabelText(label) as HTMLInputElement;
 
 describe("patient panel (F1, F2)", () => {
-  it("lists the sample patients and typical values, with a hint before anything is loaded", () => {
-    const { analysis } = renderPanel(initialAnalysisState);
+  it("gives a hint and the way to a patient before anything is loaded", () => {
+    const { onNavigate } = renderPanel(initialAnalysisState);
 
-    const samples = within(screen.getByRole("group", { name: "Sample patients" })).getAllByRole("button");
-    expect(samples.map((button) => button.textContent)).toEqual(["Sample A60 y · Male", "Sample B71 y · Female"]);
-    expect(samples.every((button) => button.getAttribute("aria-pressed") === "false")).toBe(true);
-    expect(screen.getByText("Choose a sample patient or start from typical values.")).toBeTruthy();
+    expect(screen.getAllByText("Choose a sample patient or enter a patient of your own.")).toHaveLength(2);
     expect(screen.queryByRole("group", { name: "Quick what-if controls" })).toBeNull();
 
-    fireEvent.click(samples[1]);
-    expect(analysis.loadSample).toHaveBeenCalledExactlyOnceWith(B);
-    fireEvent.click(screen.getByRole("button", { name: "Start from typical values" }));
-    expect(analysis.loadTypical).toHaveBeenCalledOnce();
+    fireEvent.click(screen.getByRole("button", { name: "Choose another patient" }));
+    expect(onNavigate).toHaveBeenLastCalledWith("patients");
+    fireEvent.click(screen.getByRole("button", { name: "New patient" }));
+    expect(onNavigate).toHaveBeenLastCalledWith("new");
   });
 
-  it("marks the loaded sample and shows that it was held out", () => {
+  it("names the sample in analysis and says that it was held out", () => {
     const { rerender } = renderPanel(loaded());
+    const card = () => screen.getByRole("heading", { name: "Patient" }).closest("section")!.textContent;
 
-    expect(screen.getByRole("button", { name: /Sample A/ }).getAttribute("aria-pressed")).toBe("true");
-    expect(screen.getByRole("button", { name: /Sample B/ }).getAttribute("aria-pressed")).toBe("false");
-    expect(screen.getByText("Held out — not used for training or validation.")).toBeTruthy();
+    expect(card()).toContain("Sample A60 y · MaleHeld out — not used for training or validation.");
 
-    rerender(loaded({ source: "typical", sampleId: null }));
-    expect(screen.getByRole("button", { name: /Sample A/ }).getAttribute("aria-pressed")).toBe("false");
-    expect(
-      screen.getByRole("button", { name: "Start from typical values" }).getAttribute("aria-pressed"),
-    ).toBe("true");
+    rerender(loaded({ sampleId: B.id, loadedValues: B.features, values: B.features }));
+    expect(card()).toContain("Sample B71 y · Female");
+  });
+
+  it("names a patient of the user's own by age and sex, and says it has no dataset label", () => {
+    const own = { ...A.features, age: 72, sex: "Female" };
+    renderPanel(loaded({ source: "custom", sampleId: null, loadedValues: own, values: own }));
+
+    const card = screen.getByRole("heading", { name: "Patient" }).closest("section")!.textContent;
+    expect(card).toContain("Your patient72 y · Female");
+    expect(card).toContain("Entered on the New patient page. It has no dataset label to compare with.");
+    expect(card).not.toContain("Held out");
+  });
+
+  it("keeps the name of the loaded patient while its inputs are being changed", () => {
+    renderPanel(loaded({ values: { ...A.features, age: 80, sex: "Female" } }));
+
+    expect(screen.getByRole("heading", { name: "Patient" }).closest("section")!.textContent).toContain("Sample A60 y · Male");
   });
 
   it("builds one section per group and one field per input from the schema", () => {

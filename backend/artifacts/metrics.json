@@ -1,11 +1,11 @@
 {
-  "model_version": "20261007T1423Z-7393432",
+  "model_version": "20261011T1756Z-7393432",
   "validation": {
     "scheme": "repeated_stratified_kfold",
     "n_splits": 5,
     "n_repeats": 5,
     "seed": 42,
-    "n_rows": 297,
+    "n_rows": 291,
     "decision_threshold": 0.5,
     "preprocessing_inside_folds": true,
     "excluded_columns": [
@@ -14,126 +14,126 @@
       "RCA",
       "Cath"
     ],
-    "holdout_note": "6 sample patients were held out by a fixed rule (seed 42) before any training; they are not used for cross-validation or the final fit."
+    "holdout_note": "12 sample patients were held out by a fixed rule (seed 42) before any training; they are not used for cross-validation or the final fit."
   },
   "targets": {
     "cad": {
-      "n_positive": 212,
-      "n_negative": 85,
-      "prevalence": 0.7138,
+      "n_positive": 210,
+      "n_negative": 81,
+      "prevalence": 0.7216,
       "selected_model": "logistic_regression",
       "selection_reason": "Within 0.01 of best; simplest model preferred",
       "candidates": {
         "logistic_regression": {
           "accuracy": {
-            "mean": 0.86,
-            "std": 0.0312
+            "mean": 0.8606,
+            "std": 0.0449
           },
           "precision": {
-            "mean": 0.9084,
-            "std": 0.0337
+            "mean": 0.903,
+            "std": 0.04
           },
           "recall": {
-            "mean": 0.8963,
-            "std": 0.0441
+            "mean": 0.9057,
+            "std": 0.0449
           },
           "specificity": {
-            "mean": 0.7694,
-            "std": 0.0955
+            "mean": 0.7435,
+            "std": 0.1121
           },
           "f1": {
-            "mean": 0.9012,
-            "std": 0.0227
+            "mean": 0.9034,
+            "std": 0.0318
           },
           "roc_auc": {
-            "mean": 0.9168,
-            "std": 0.0329
+            "mean": 0.9166,
+            "std": 0.0366
           },
           "average_precision": {
-            "mean": 0.9645,
-            "std": 0.0167
+            "mean": 0.9658,
+            "std": 0.0166
           },
           "brier": {
-            "mean": 0.1039,
-            "std": 0.0191
+            "mean": 0.1022,
+            "std": 0.0286
           }
         },
         "random_forest": {
           "accuracy": {
-            "mean": 0.8627,
-            "std": 0.0358
+            "mean": 0.857,
+            "std": 0.0404
           },
           "precision": {
-            "mean": 0.8694,
-            "std": 0.0316
+            "mean": 0.8622,
+            "std": 0.0336
           },
           "recall": {
-            "mean": 0.9519,
-            "std": 0.031
+            "mean": 0.9562,
+            "std": 0.0348
           },
           "specificity": {
-            "mean": 0.64,
-            "std": 0.0989
+            "mean": 0.5996,
+            "std": 0.1125
           },
           "f1": {
-            "mean": 0.9083,
-            "std": 0.0235
+            "mean": 0.9062,
+            "std": 0.0265
           },
           "roc_auc": {
-            "mean": 0.9224,
-            "std": 0.036
+            "mean": 0.9171,
+            "std": 0.0397
           },
           "average_precision": {
-            "mean": 0.9653,
-            "std": 0.0182
+            "mean": 0.9638,
+            "std": 0.0205
           },
           "brier": {
-            "mean": 0.1123,
-            "std": 0.012
+            "mean": 0.114,
+            "std": 0.0147
           }
         },
         "gradient_boosting": {
           "accuracy": {
-            "mean": 0.8519,
-            "std": 0.0372
+            "mean": 0.8481,
+            "std": 0.039
           },
           "precision": {
-            "mean": 0.8759,
-            "std": 0.0359
+            "mean": 0.8725,
+            "std": 0.0337
           },
           "recall": {
-            "mean": 0.9254,
-            "std": 0.0332
+            "mean": 0.9267,
+            "std": 0.0431
           },
           "specificity": {
-            "mean": 0.6682,
-            "std": 0.1089
+            "mean": 0.6435,
+            "std": 0.1136
           },
           "f1": {
-            "mean": 0.8993,
-            "std": 0.0249
+            "mean": 0.8979,
+            "std": 0.0268
           },
           "roc_auc": {
-            "mean": 0.9044,
-            "std": 0.0401
+            "mean": 0.905,
+            "std": 0.0394
           },
           "average_precision": {
-            "mean": 0.9571,
-            "std": 0.0203
+            "mean": 0.96,
+            "std": 0.0196
           },
           "brier": {
-            "mean": 0.1088,
-            "std": 0.0269
+            "mean": 0.1124,
+            "std": 0.0295
           }
         },
         "baseline_prior": {
           "accuracy": {
-            "mean": 0.7138,
-            "std": 0.0024
+            "mean": 0.7217,
+            "std": 0.0049
           },
           "precision": {
-            "mean": 0.7138,
-            "std": 0.0024
+            "mean": 0.7217,
+            "std": 0.0049
           },
           "recall": {
             "mean": 1.0,
@@ -144,63 +144,63 @@
             "std": 0.0
           },
           "f1": {
-            "mean": 0.833,
-            "std": 0.0016
+            "mean": 0.8383,
+            "std": 0.0033
           },
           "roc_auc": {
             "mean": 0.5,
             "std": 0.0
           },
           "average_precision": {
-            "mean": 0.7138,
-            "std": 0.0024
+            "mean": 0.7217,
+            "std": 0.0049
           },
           "brier": {
-            "mean": 0.2043,
-            "std": 0.001
+            "mean": 0.2009,
+            "std": 0.0022
           }
         }
       },
       "global_importance": [
         {
           "feature": "region_rwma",
-          "share": 0.0954
+          "share": 0.0969
         },
         {
           "feature": "typical_chest_pain",
-          "share": 0.0941
+          "share": 0.094
         },
         {
           "feature": "age",
-          "share": 0.0645
-        },
-        {
-          "feature": "tinversion",
-          "share": 0.0449
+          "share": 0.0634
         },
         {
           "feature": "htn",
-          "share": 0.0437
+          "share": 0.0462
         },
         {
-          "feature": "tg",
-          "share": 0.0421
+          "feature": "tinversion",
+          "share": 0.0442
         },
         {
           "feature": "dyspnea",
-          "share": 0.042
+          "share": 0.0425
         },
         {
           "feature": "sex",
-          "share": 0.0403
+          "share": 0.0405
         },
         {
           "feature": "dm",
-          "share": 0.0387
+          "share": 0.0402
         },
         {
-          "feature": "bmi",
-          "share": 0.0378
+          "feature": "tg",
+          "share": 0.0394
+        },
+        {
+          "feature": "ef_tte",
+          "share": 0.0386
         }
       ],
       "plots": {
@@ -210,122 +210,122 @@
       }
     },
     "lad": {
-      "n_positive": 174,
-      "n_negative": 123,
-      "prevalence": 0.5859,
+      "n_positive": 173,
+      "n_negative": 118,
+      "prevalence": 0.5945,
       "selected_model": "random_forest",
       "selection_reason": "Highest mean ROC-AUC",
       "candidates": {
         "logistic_regression": {
           "accuracy": {
-            "mean": 0.7561,
-            "std": 0.0503
+            "mean": 0.7553,
+            "std": 0.0422
           },
           "precision": {
-            "mean": 0.7902,
-            "std": 0.053
+            "mean": 0.7922,
+            "std": 0.0446
           },
           "recall": {
-            "mean": 0.7997,
-            "std": 0.0707
+            "mean": 0.8031,
+            "std": 0.0799
           },
           "specificity": {
-            "mean": 0.6942,
-            "std": 0.0976
+            "mean": 0.6851,
+            "std": 0.0972
           },
           "f1": {
-            "mean": 0.7927,
-            "std": 0.0463
+            "mean": 0.7944,
+            "std": 0.043
           },
           "roc_auc": {
-            "mean": 0.8348,
-            "std": 0.0531
+            "mean": 0.8289,
+            "std": 0.0477
           },
           "average_precision": {
-            "mean": 0.8831,
-            "std": 0.0391
+            "mean": 0.8801,
+            "std": 0.0403
           },
           "brier": {
-            "mean": 0.1695,
-            "std": 0.0332
+            "mean": 0.1714,
+            "std": 0.0293
           }
         },
         "random_forest": {
           "accuracy": {
-            "mean": 0.7892,
-            "std": 0.0642
+            "mean": 0.7952,
+            "std": 0.0486
           },
           "precision": {
-            "mean": 0.784,
-            "std": 0.0644
+            "mean": 0.7908,
+            "std": 0.0493
           },
           "recall": {
-            "mean": 0.8918,
-            "std": 0.0506
+            "mean": 0.8958,
+            "std": 0.0504
           },
           "specificity": {
-            "mean": 0.6433,
-            "std": 0.1304
+            "mean": 0.648,
+            "std": 0.0986
           },
           "f1": {
-            "mean": 0.833,
-            "std": 0.0483
+            "mean": 0.8388,
+            "std": 0.0379
           },
           "roc_auc": {
-            "mean": 0.8552,
-            "std": 0.0532
+            "mean": 0.851,
+            "std": 0.0487
           },
           "average_precision": {
-            "mean": 0.8858,
-            "std": 0.0413
+            "mean": 0.893,
+            "std": 0.0384
           },
           "brier": {
-            "mean": 0.1614,
-            "std": 0.0186
+            "mean": 0.1637,
+            "std": 0.0165
           }
         },
         "gradient_boosting": {
           "accuracy": {
-            "mean": 0.7616,
-            "std": 0.0558
+            "mean": 0.7651,
+            "std": 0.0484
           },
           "precision": {
-            "mean": 0.7918,
-            "std": 0.0574
+            "mean": 0.7936,
+            "std": 0.0471
           },
           "recall": {
-            "mean": 0.8103,
-            "std": 0.0702
+            "mean": 0.8209,
+            "std": 0.0604
           },
           "specificity": {
-            "mean": 0.6927,
-            "std": 0.1052
+            "mean": 0.6838,
+            "std": 0.0841
           },
           "f1": {
-            "mean": 0.7988,
-            "std": 0.0492
+            "mean": 0.8055,
+            "std": 0.0419
           },
           "roc_auc": {
-            "mean": 0.8364,
-            "std": 0.0592
+            "mean": 0.8341,
+            "std": 0.0509
           },
           "average_precision": {
-            "mean": 0.882,
-            "std": 0.0455
+            "mean": 0.8864,
+            "std": 0.0484
           },
           "brier": {
-            "mean": 0.1706,
-            "std": 0.0397
+            "mean": 0.1685,
+            "std": 0.0336
           }
         },
         "baseline_prior": {
           "accuracy": {
-            "mean": 0.5859,
-            "std": 0.0065
+            "mean": 0.5945,
+            "std": 0.0077
           },
           "precision": {
-            "mean": 0.5859,
-            "std": 0.0065
+            "mean": 0.5945,
+            "std": 0.0077
           },
           "recall": {
             "mean": 1.0,
@@ -336,63 +336,63 @@
             "std": 0.0
           },
           "f1": {
-            "mean": 0.7388,
-            "std": 0.0052
+            "mean": 0.7457,
+            "std": 0.0061
           },
           "roc_auc": {
             "mean": 0.5,
             "std": 0.0
           },
           "average_precision": {
-            "mean": 0.5859,
-            "std": 0.0065
+            "mean": 0.5945,
+            "std": 0.0077
           },
           "brier": {
-            "mean": 0.2426,
-            "std": 0.0011
+            "mean": 0.2411,
+            "std": 0.0015
           }
         }
       },
       "global_importance": [
         {
           "feature": "typical_chest_pain",
-          "share": 0.1512
+          "share": 0.1619
         },
         {
           "feature": "region_rwma",
-          "share": 0.094
+          "share": 0.0929
         },
         {
           "feature": "ef_tte",
-          "share": 0.0855
+          "share": 0.0799
         },
         {
           "feature": "atypical",
-          "share": 0.0702
+          "share": 0.0695
         },
         {
           "feature": "age",
-          "share": 0.0694
+          "share": 0.0669
         },
         {
           "feature": "esr",
-          "share": 0.0348
-        },
-        {
-          "feature": "neut",
-          "share": 0.0301
-        },
-        {
-          "feature": "lymph",
-          "share": 0.0295
+          "share": 0.0372
         },
         {
           "feature": "tg",
-          "share": 0.0279
+          "share": 0.0297
         },
         {
-          "feature": "pr",
-          "share": 0.0255
+          "feature": "lymph",
+          "share": 0.0296
+        },
+        {
+          "feature": "neut",
+          "share": 0.0295
+        },
+        {
+          "feature": "tinversion",
+          "share": 0.024
         }
       ],
       "plots": {
@@ -403,117 +403,117 @@
     },
     "lcx": {
       "n_positive": 116,
-      "n_negative": 181,
-      "prevalence": 0.3906,
+      "n_negative": 175,
+      "prevalence": 0.3986,
       "selected_model": "random_forest",
       "selection_reason": "Highest mean ROC-AUC",
       "candidates": {
         "logistic_regression": {
           "accuracy": {
-            "mean": 0.6364,
-            "std": 0.046
+            "mean": 0.6396,
+            "std": 0.0576
           },
           "precision": {
-            "mean": 0.5499,
-            "std": 0.0845
+            "mean": 0.567,
+            "std": 0.1016
           },
           "recall": {
-            "mean": 0.467,
-            "std": 0.0737
+            "mean": 0.4564,
+            "std": 0.093
           },
           "specificity": {
-            "mean": 0.745,
-            "std": 0.0795
+            "mean": 0.7611,
+            "std": 0.0835
           },
           "f1": {
-            "mean": 0.4998,
-            "std": 0.0566
+            "mean": 0.5006,
+            "std": 0.0789
           },
           "roc_auc": {
-            "mean": 0.6697,
-            "std": 0.0515
+            "mean": 0.6644,
+            "std": 0.0728
           },
           "average_precision": {
-            "mean": 0.5743,
-            "std": 0.0686
+            "mean": 0.5761,
+            "std": 0.0837
           },
           "brier": {
-            "mean": 0.2406,
-            "std": 0.0247
+            "mean": 0.2426,
+            "std": 0.0367
           }
         },
         "random_forest": {
           "accuracy": {
-            "mean": 0.6755,
-            "std": 0.0461
+            "mean": 0.6796,
+            "std": 0.0536
           },
           "precision": {
-            "mean": 0.6527,
-            "std": 0.1157
+            "mean": 0.6553,
+            "std": 0.1136
           },
           "recall": {
-            "mean": 0.3962,
-            "std": 0.0881
+            "mean": 0.429,
+            "std": 0.0923
           },
           "specificity": {
-            "mean": 0.8544,
-            "std": 0.0755
+            "mean": 0.8457,
+            "std": 0.0631
           },
           "f1": {
-            "mean": 0.4849,
-            "std": 0.0763
+            "mean": 0.5137,
+            "std": 0.0865
           },
           "roc_auc": {
-            "mean": 0.7389,
-            "std": 0.0555
+            "mean": 0.7262,
+            "std": 0.0758
           },
           "average_precision": {
-            "mean": 0.6194,
-            "std": 0.0716
+            "mean": 0.6137,
+            "std": 0.088
           },
           "brier": {
-            "mean": 0.2044,
-            "std": 0.0112
+            "mean": 0.2092,
+            "std": 0.016
           }
         },
         "gradient_boosting": {
           "accuracy": {
-            "mean": 0.6667,
-            "std": 0.0595
+            "mean": 0.6625,
+            "std": 0.0689
           },
           "precision": {
-            "mean": 0.5939,
-            "std": 0.1049
+            "mean": 0.5947,
+            "std": 0.1063
           },
           "recall": {
-            "mean": 0.4914,
-            "std": 0.104
+            "mean": 0.493,
+            "std": 0.1194
           },
           "specificity": {
-            "mean": 0.7789,
-            "std": 0.0783
+            "mean": 0.7749,
+            "std": 0.0781
           },
           "f1": {
-            "mean": 0.5327,
-            "std": 0.0885
+            "mean": 0.5339,
+            "std": 0.1057
           },
           "roc_auc": {
-            "mean": 0.7321,
-            "std": 0.0612
+            "mean": 0.7124,
+            "std": 0.0719
           },
           "average_precision": {
-            "mean": 0.642,
-            "std": 0.0868
+            "mean": 0.6093,
+            "std": 0.0905
           },
           "brier": {
-            "mean": 0.2151,
-            "std": 0.0307
+            "mean": 0.226,
+            "std": 0.0366
           }
         },
         "baseline_prior": {
           "accuracy": {
-            "mean": 0.6094,
-            "std": 0.0053
+            "mean": 0.6014,
+            "std": 0.0041
           },
           "precision": {
             "mean": 0.0,
@@ -536,55 +536,55 @@
             "std": 0.0
           },
           "average_precision": {
-            "mean": 0.3906,
-            "std": 0.0053
+            "mean": 0.3986,
+            "std": 0.0041
           },
           "brier": {
-            "mean": 0.238,
-            "std": 0.0012
+            "mean": 0.2397,
+            "std": 0.0008
           }
         }
       },
       "global_importance": [
         {
           "feature": "age",
-          "share": 0.1166
+          "share": 0.1083
         },
         {
           "feature": "typical_chest_pain",
-          "share": 0.0902
+          "share": 0.091
         },
         {
           "feature": "cr",
-          "share": 0.0593
-        },
-        {
-          "feature": "plt",
-          "share": 0.0571
-        },
-        {
-          "feature": "fbs",
-          "share": 0.049
+          "share": 0.0591
         },
         {
           "feature": "tg",
-          "share": 0.0484
+          "share": 0.0546
+        },
+        {
+          "feature": "fbs",
+          "share": 0.0503
+        },
+        {
+          "feature": "plt",
+          "share": 0.0483
         },
         {
           "feature": "bp",
-          "share": 0.0372
+          "share": 0.0405
         },
         {
-          "feature": "length",
-          "share": 0.0339
+          "feature": "ldl",
+          "share": 0.0343
+        },
+        {
+          "feature": "esr",
+          "share": 0.0335
         },
         {
           "feature": "na",
           "share": 0.0327
-        },
-        {
-          "feature": "esr",
-          "share": 0.0313
         }
       ],
       "plots": {
@@ -594,118 +594,118 @@
       }
     },
     "rca": {
-      "n_positive": 113,
-      "n_negative": 184,
-      "prevalence": 0.3805,
+      "n_positive": 111,
+      "n_negative": 180,
+      "prevalence": 0.3814,
       "selected_model": "logistic_regression",
       "selection_reason": "Highest mean ROC-AUC",
       "candidates": {
         "logistic_regression": {
           "accuracy": {
-            "mean": 0.672,
-            "std": 0.0488
+            "mean": 0.6831,
+            "std": 0.0449
           },
           "precision": {
-            "mean": 0.5808,
+            "mean": 0.597,
             "std": 0.0761
           },
           "recall": {
-            "mean": 0.526,
-            "std": 0.0935
+            "mean": 0.5387,
+            "std": 0.0992
           },
           "specificity": {
-            "mean": 0.762,
-            "std": 0.0713
+            "mean": 0.7722,
+            "std": 0.0643
           },
           "f1": {
-            "mean": 0.5474,
-            "std": 0.0699
+            "mean": 0.5616,
+            "std": 0.072
           },
           "roc_auc": {
-            "mean": 0.7248,
-            "std": 0.0454
+            "mean": 0.7279,
+            "std": 0.0573
           },
           "average_precision": {
-            "mean": 0.6282,
-            "std": 0.0681
+            "mean": 0.6405,
+            "std": 0.0765
           },
           "brier": {
-            "mean": 0.2151,
-            "std": 0.0259
+            "mean": 0.2118,
+            "std": 0.0277
           }
         },
         "random_forest": {
           "accuracy": {
-            "mean": 0.6641,
-            "std": 0.0472
+            "mean": 0.6631,
+            "std": 0.0503
           },
           "precision": {
-            "mean": 0.5984,
-            "std": 0.1077
+            "mean": 0.6029,
+            "std": 0.1236
           },
           "recall": {
-            "mean": 0.3525,
-            "std": 0.0886
+            "mean": 0.3566,
+            "std": 0.0891
           },
           "specificity": {
-            "mean": 0.8555,
-            "std": 0.0448
+            "mean": 0.8522,
+            "std": 0.0586
           },
           "f1": {
-            "mean": 0.4403,
-            "std": 0.0945
+            "mean": 0.4434,
+            "std": 0.0954
           },
           "roc_auc": {
-            "mean": 0.6998,
-            "std": 0.044
+            "mean": 0.6924,
+            "std": 0.0698
           },
           "average_precision": {
-            "mean": 0.5873,
-            "std": 0.0616
+            "mean": 0.5917,
+            "std": 0.0866
           },
           "brier": {
-            "mean": 0.2095,
-            "std": 0.0099
+            "mean": 0.2125,
+            "std": 0.0154
           }
         },
         "gradient_boosting": {
           "accuracy": {
-            "mean": 0.6418,
-            "std": 0.0545
+            "mean": 0.6377,
+            "std": 0.063
           },
           "precision": {
-            "mean": 0.5413,
-            "std": 0.0937
+            "mean": 0.5337,
+            "std": 0.1047
           },
           "recall": {
-            "mean": 0.416,
-            "std": 0.1005
+            "mean": 0.4211,
+            "std": 0.1018
           },
           "specificity": {
-            "mean": 0.7805,
-            "std": 0.0705
+            "mean": 0.7711,
+            "std": 0.0717
           },
           "f1": {
-            "mean": 0.4653,
-            "std": 0.0906
+            "mean": 0.4674,
+            "std": 0.0973
           },
           "roc_auc": {
-            "mean": 0.6514,
-            "std": 0.0602
+            "mean": 0.6577,
+            "std": 0.0731
           },
           "average_precision": {
-            "mean": 0.5608,
-            "std": 0.0669
+            "mean": 0.5619,
+            "std": 0.0804
           },
           "brier": {
-            "mean": 0.2434,
-            "std": 0.0296
+            "mean": 0.242,
+            "std": 0.0344
           }
         },
         "baseline_prior": {
           "accuracy": {
-            "mean": 0.6195,
-            "std": 0.0066
+            "mean": 0.6186,
+            "std": 0.0042
           },
           "precision": {
             "mean": 0.0,
@@ -728,55 +728,55 @@
             "std": 0.0
           },
           "average_precision": {
-            "mean": 0.3805,
-            "std": 0.0066
+            "mean": 0.3814,
+            "std": 0.0042
           },
           "brier": {
-            "mean": 0.2357,
-            "std": 0.0016
+            "mean": 0.2359,
+            "std": 0.001
           }
         }
       },
       "global_importance": [
         {
           "feature": "dm",
-          "share": 0.0793
+          "share": 0.083
         },
         {
           "feature": "sex",
-          "share": 0.078
+          "share": 0.0802
         },
         {
           "feature": "age",
-          "share": 0.0706
+          "share": 0.0703
         },
         {
           "feature": "dyspnea",
-          "share": 0.0553
+          "share": 0.0652
         },
         {
           "feature": "function_class",
-          "share": 0.0537
-        },
-        {
-          "feature": "weight",
-          "share": 0.0471
-        },
-        {
-          "feature": "neut",
-          "share": 0.047
+          "share": 0.0573
         },
         {
           "feature": "esr",
-          "share": 0.0464
+          "share": 0.0478
+        },
+        {
+          "feature": "weight",
+          "share": 0.0453
+        },
+        {
+          "feature": "neut",
+          "share": 0.0442
         },
         {
           "feature": "bun",
-          "share": 0.0432
+          "share": 0.0438
         },
         {
           "feature": "typical_chest_pain",
-          "share": 0.0386
+          "share": 0.0373
         }
       ],
       "plots": {

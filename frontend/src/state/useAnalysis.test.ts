@@ -57,14 +57,15 @@ describe("useAnalysis", () => {
     expect(analysis().state.originalResult).toBe(result);
   });
 
-  it("loads the typical values from the schema defaults", () => {
+  it("loads a patient of the user's own as a custom patient", () => {
     const { predict, analysis } = setup();
 
-    act(() => analysis().loadTypical());
-
     const typical = Object.fromEntries(FEATURES.map((feature) => [feature.id, feature.default]));
+
+    act(() => analysis().loadCustom(typical));
+
     expect(predict).toHaveBeenCalledExactlyOnceWith(typical);
-    expect(analysis().state).toMatchObject({ source: "typical", sampleId: null, values: typical });
+    expect(analysis().state).toMatchObject({ source: "custom", sampleId: null, values: typical, loadedValues: typical });
   });
 
   it("debounces edits by 400 ms and sends only the latest values", async () => {

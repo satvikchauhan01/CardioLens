@@ -52,7 +52,7 @@ export function TargetEvaluation({ target, metrics, threshold }: TargetEvaluatio
               alt={plot.alt}
               width={920}
               height={860}
-              className="h-auto w-full rounded-lg border border-line"
+              className="h-auto w-full rounded-lg border border-line bg-paper"
             />
           ))}
         </div>

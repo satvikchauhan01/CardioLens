@@ -130,8 +130,8 @@ def test_meta_matches_the_contract(meta):
         "license": "CC BY 4.0",
         "url": "https://archive.ics.uci.edu/dataset/411/extention+of+z+alizadeh+sani+dataset",
         "n_total": 303,
-        "n_train": 297,
-        "n_holdout": 6,
+        "n_train": 291,
+        "n_holdout": 12,
     }
     assert [target["id"] for target in meta["targets"]] == list(TARGET_IDS)
     for target, expected in zip(meta["targets"], TARGETS):
@@ -166,7 +166,7 @@ def test_samples_match_the_contract(samples, meta):
     stored = read("samples.json")["samples"]
     feature_ids = [feature["id"] for feature in meta["features"]]
 
-    assert [sample["id"] for sample in samples] == [f"sample-{letter}" for letter in "abcdef"]
+    assert [sample["id"] for sample in samples] == [f"sample-{letter}" for letter in "abcdefghijkl"]
     for sample, original in zip(samples, stored):
         assert set(sample) == {"id", "title", "subtitle", "features", "ground_truth", "note"}
         assert sample == {key: value for key, value in original.items() if key != "source_row"}
@@ -199,7 +199,7 @@ def test_missing_plot_returns_404_envelope(client, name):
 # --- T4.3 predict ------------------------------------------------------------------------------
 
 
-@pytest.mark.parametrize("index", range(6))
+@pytest.mark.parametrize("index", range(12))
 def test_each_sample_predicts(client, samples, meta, index):
     response = predict(client, samples[index]["features"])
     body = response.json()

@@ -18,7 +18,7 @@ export function GroundTruthToggle({ checked, onChange, unavailableReason, matche
   const id = "ground-truth-toggle";
 
   return (
-    <div className="rounded-lg border border-line bg-canvas p-3">
+    <div data-tour="labels" className="rounded-lg border border-line bg-canvas p-3">
       <label
         htmlFor={id}
         title={unavailableReason ?? undefined}

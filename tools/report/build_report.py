@@ -88,10 +88,10 @@ def compose_figures(captures: Path) -> None:
     def narrowed(image, width: int):
         return image.resize((width, round(image.height * width / image.width)), Image.LANCZOS)
 
-    for name in ("app_overview", "app_what_if"):
+    for name in ("home_page", "app_overview", "app_what_if", "app_healthy", "patients_page", "app_dark", "app_tour"):
         narrowed(opened(captures / f"{name}.png"), 2000).save(IMAGES / f"{name}.jpg", quality=88, optimize=True)
-    panels = [opened(captures / f"{name}.png") for name in ("viewer_sample_d_lad", "ground_truth_sample_d_lad", "explanation_sample_d_lad")]
-    side_by_side(panels, 1300, 28).save(IMAGES / "sample_d_explained.jpg", quality=88, optimize=True)
+    panels = [opened(captures / f"{name}.png") for name in ("viewer_sample_b_lad", "ground_truth_sample_b_lad", "explanation_sample_b_lad")]
+    side_by_side(panels, 1300, 28).save(IMAGES / "sample_b_explained.jpg", quality=88, optimize=True)
     side_by_side([opened(PLOTS / "cad_roc.png"), opened(PLOTS / "lcx_roc.png")], 860, 24).save(IMAGES / "roc_cad_lcx.png", optimize=True)
     print(f"  figures written to {IMAGES.relative_to(REPO)}")
 

@@ -1,12 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { colorDistance, NO_ESTIMATE_COLOR, relativeLuminance, riskColor } from "../config/risk";
-import {
-  ARTERY_OUTLINE_COLOR,
-  HEART_COLOR,
-  HEART_REGION_COLORS,
-  HOVERED_OUTLINE_COLOR,
-  SELECTED_OUTLINE_COLOR,
-} from "./colors";
+import { VESSELS } from "../config/vessels";
+import { ARTERY_OUTLINE_COLOR, HEART_COLOR, HEART_REGION_COLORS, SELECTED_OUTLINE_COLOR } from "./colors";
 import { MODEL_HEART_REGIONS } from "./heartModelData";
 
 // Every colour an artery can take: the scale in steps of 5%, and the grey of "no estimate".
@@ -45,8 +40,6 @@ describe("colours of the heart against the colours of the arteries", () => {
     for (const edge of [ARTERY_OUTLINE_COLOR, SELECTED_OUTLINE_COLOR]) {
       expect(nearest(edge, HEART_COLORS)).toBeGreaterThan(45);
     }
-    // The edge of a hovered artery is the page's blue: a different hue, and still far from the heart.
-    expect(nearest(HOVERED_OUTLINE_COLOR, HEART_COLORS)).toBeGreaterThan(25);
     expect(nearest(ARTERY_OUTLINE_COLOR, ARTERY_COLORS)).toBeGreaterThan(15);
     const darkest = Math.min(...ARTERY_COLORS.map(relativeLuminance));
     expect(relativeLuminance(ARTERY_OUTLINE_COLOR)).toBeLessThan(darkest / 2);
@@ -61,3 +54,36 @@ describe("colours of the heart against the colours of the arteries", () => {
     expect(colorDistance(atrium, great_vessel)).toBeGreaterThan(12);
   });
 });
+
+describe("the rim colour of each artery", () => {
+  const RIMS = VESSELS.map((vessel) => ({ id: vessel.id, color: vessel.rimColor }));
+
+  it("has one colour per artery, and no two alike", () => {
+    expect(RIMS.map((rim) => rim.id)).toEqual(["lad", "lcx", "rca"]);
+    for (const rim of RIMS) expect(rim.color).toMatch(/^#[0-9a-f]{6}$/);
+    for (const a of RIMS) {
+      for (const b of RIMS.filter((other) => other.id > a.id)) {
+        expect(colorDistance(a.color, b.color), `${a.id} and ${b.id}`).toBeGreaterThan(20);
+      }
+    }
+  });
+
+  it("is plainly apart from the heart, and darker than every part of it", () => {
+    for (const { color } of RIMS) {
+      expect(nearest(color, HEART_COLORS)).toBeGreaterThan(28);
+      for (const heart of HEART_COLORS) expect(relativeLuminance(heart)).toBeGreaterThan(2 * relativeLuminance(color));
+    }
+  });
+
+  it("is not a colour of the risk scale, so that a rim is never read as an estimate", () => {
+    for (const { color } of RIMS) {
+      expect(nearest(color, SCALE), color).toBeGreaterThan(12);
+      expect(colorDistance(color, NO_ESTIMATE_COLOR), color).toBeGreaterThan(20);
+    }
+  });
+
+  it("is named, for the words that stand beside its swatch", () => {
+    expect(VESSELS.map((vessel) => vessel.rimColorName)).toEqual(["blue", "magenta", "green"]);
+  });
+});
+

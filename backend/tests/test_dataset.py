@@ -162,12 +162,27 @@ def test_holdout_is_deterministic(dataset, holdout_rows):
 def test_holdout_follows_the_slot_rule(dataset, holdout_rows):
     count = stenotic_count(dataset.labels)
     assert [int(count[row]) for row in holdout_rows] == list(HOLDOUT_SLOTS)
-    assert len(set(holdout_rows)) == len(HOLDOUT_SLOTS) == 6
+    assert len(set(holdout_rows)) == len(HOLDOUT_SLOTS) == 12
     assert consistent_rows(dataset.labels)[holdout_rows].all()
 
+    # The three patients with one stenotic vessel show the three vessels, one each.
     single = [row for row in holdout_rows if count[row] == 1]
     vessels = [next(v for v in VESSEL_IDS if dataset.labels.at[row, v] == 1) for row in single]
-    assert len(set(vessels)) == 2
+    assert sorted(vessels) == sorted(VESSEL_IDS)
+
+
+def test_half_of_the_samples_have_coronary_artery_disease_and_half_do_not(dataset, holdout_rows):
+    with_cad = [int(dataset.labels.at[row, "cad"]) for row in holdout_rows]
+
+    assert sum(with_cad) == 6
+    assert len(with_cad) - sum(with_cad) == 6
+
+
+def test_slots_added_after_the_first_six_left_those_patients_unchanged(dataset, holdout_rows, monkeypatch):
+    # The rule fills the slots in order, so the first six samples are the six the project began with.
+    monkeypatch.setattr("ml.dataset.HOLDOUT_SLOTS", HOLDOUT_SLOTS[:6])
+
+    assert select_holdout(dataset.labels) == holdout_rows[:6]
 
 
 def test_inconsistent_row_is_never_a_sample(dataset):
@@ -178,7 +193,7 @@ def test_inconsistent_row_is_never_a_sample(dataset):
 
 
 def test_samples_are_disjoint_from_training_rows(dataset, holdout_rows, train_rows):
-    assert len(train_rows) == 297
+    assert len(train_rows) == 291
     assert not set(train_rows) & set(holdout_rows)
     assert set(train_rows) | set(holdout_rows) == set(dataset.features.index)
 
@@ -186,7 +201,8 @@ def test_samples_are_disjoint_from_training_rows(dataset, holdout_rows, train_ro
 def test_samples_have_the_contract_shape(dataset, holdout_rows):
     samples = build_samples(dataset, holdout_rows)
 
-    assert [sample["id"] for sample in samples] == [f"sample-{letter}" for letter in "abcdef"]
+    assert [sample["id"] for sample in samples] == [f"sample-{letter}" for letter in "abcdefghijkl"]
+    assert [sample["title"] for sample in samples][-1] == "Sample L"
     assert samples[0]["title"] == "Sample A"
     for sample, row in zip(samples, holdout_rows):
         assert set(sample["features"]) == set(dataset.feature_ids)

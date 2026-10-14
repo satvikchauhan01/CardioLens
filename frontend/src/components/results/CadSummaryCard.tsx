@@ -2,9 +2,9 @@
 
 import type { TargetInfo, TargetPrediction } from "../../api/types";
 import { CAD_CAPTION, STATUS_TEXT } from "../../config/copy";
-import { riskColor } from "../../config/risk";
-import { formatPercent, percentPoints } from "../../utils/format";
+import { AnimatedPercent } from "./AnimatedPercent";
 import { EstimateNotes } from "./EstimateNotes";
+import { RiskGauge } from "./RiskGauge";
 
 interface CadSummaryCardProps {
   target: TargetInfo;
@@ -35,29 +35,17 @@ export function CadSummaryCard({
         type="button"
         aria-pressed={selected}
         onClick={onSelect}
-        className={`w-full cursor-pointer rounded-lg border p-3 text-left focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand ${
+        className={`w-full cursor-pointer rounded-lg border p-3 text-left transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand motion-reduce:transition-none ${
           selected ? "border-brand bg-brand-soft" : "border-line bg-surface hover:border-brand"
         }`}
       >
         <span className="block text-xs font-medium text-ink-muted">{target.label}</span>
-        <span className="mt-1 flex items-baseline justify-between gap-3">
-          <span className="text-3xl font-semibold tracking-tight text-ink">
-            {formatPercent(prediction.probability)}
-          </span>
-          <span className="text-right">
-            <span className="block text-sm font-medium text-ink">{status}</span>
-            <span className="block text-xs text-ink-muted">{levelLabel}</span>
-          </span>
-        </span>
-        <span aria-hidden="true" className="mt-2 block h-1.5 overflow-hidden rounded-full bg-line">
-          <span
-            data-risk-bar={target.id}
-            className="block h-full rounded-full"
-            style={{
-              width: `${percentPoints(prediction.probability)}%`,
-              backgroundColor: riskColor(prediction.probability),
-            }}
-          />
+        <RiskGauge target={target.id} probability={prediction.probability}>
+          <AnimatedPercent probability={prediction.probability} />
+        </RiskGauge>
+        <span className="mt-2 flex items-baseline justify-between gap-3">
+          <span className="text-sm font-medium text-ink">{status}</span>
+          <span className="text-xs text-ink-muted">{levelLabel}</span>
         </span>
         <EstimateNotes target={target} prediction={prediction} original={original} truth={truth} />
       </button>

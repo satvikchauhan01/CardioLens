@@ -27,6 +27,9 @@ import {
 } from "./ViewPresets";
 
 const TARGET = new Vector3(...CAMERA_TARGET);
+// The heart's own slow turn: once around in 40 seconds, whatever the screen's refresh rate.
+const TURN_RADIANS_PER_SECOND = (2 * Math.PI) / 40;
+const MAX_TURN_STEP_SECONDS = 0.1;
 
 // This file is the lazy 3D chunk: the model's download starts as soon as it has arrived.
 if (HEART_MODEL_URL) preloadHeartModel(HEART_MODEL_URL);
@@ -81,6 +84,38 @@ function CameraRig({ request, reducedMotion }: { request: ViewRequest | null; re
   return null;
 }
 
+/** Turns the camera slowly around the heart while `turning` is set: once around, or without end. */
+function Turntable({ turning, endless, onDone }: { turning: boolean; endless: boolean; onDone?: () => void }) {
+  const camera = useThree((state) => state.camera);
+  const controls = useThree((state) => state.controls) as { update: () => void } | null;
+  const invalidate = useThree((state) => state.invalidate);
+  const spherical = useRef(new Spherical());
+  const offset = useRef(new Vector3());
+  const turned = useRef(0);
+
+  useEffect(() => {
+    turned.current = 0;
+    if (turning) invalidate();
+  }, [turning, invalidate]);
+
+  useFrame((_, delta) => {
+    if (!turning) return;
+    // After a pause (a hidden tab, a page that was not on screen) the first frame reports all of
+    // it as one step; the heart must not jump.
+    const step = TURN_RADIANS_PER_SECOND * Math.min(delta, MAX_TURN_STEP_SECONDS);
+    spherical.current.setFromVector3(offset.current.copy(camera.position).sub(TARGET));
+    spherical.current.theta += step;
+    camera.position.setFromSpherical(spherical.current).add(TARGET);
+    camera.lookAt(TARGET);
+    controls?.update();
+    turned.current += step;
+    if (!endless && turned.current >= 2 * Math.PI) onDone?.();
+    else invalidate();
+  });
+
+  return null;
+}
+
 export interface HeartViewerProps {
   colors: Partial<Record<VesselId, string>>; // risk colour per artery; missing = no estimate
   labelElements: RefObject<LabelElements>; // DOM labels to keep over the arteries
@@ -88,13 +123,20 @@ export interface HeartViewerProps {
   hoveredVessel: VesselId | null;
   viewRequest: ViewRequest | null;
   reducedMotion: boolean;
+  turning?: boolean; // the heart turns by itself (never with reduced motion: the caller decides)
+  endlessTurn?: boolean; // keep turning instead of stopping after once around
+  zoom?: boolean; // the wheel zooms; off where the page itself must keep scrolling
+  onTurnDone?: () => void;
   onSelectVessel: (id: VesselId) => void;
   onSelectHeart: () => void;
   onHoverVessel: (id: VesselId | null, pointer?: ArteryPointer) => void;
   onModelError: () => void;
 }
 
-type SceneProps = Omit<HeartViewerProps, "viewRequest" | "onModelError">;
+type SceneProps = Omit<
+  HeartViewerProps,
+  "viewRequest" | "onModelError" | "turning" | "endlessTurn" | "zoom" | "onTurnDone"
+>;
 
 /** The stand-in heart with tube arteries: shown when there is no model file, or it cannot be used. */
 function StandInScene({
@@ -147,7 +189,15 @@ function ModelScene({ url, labelElements, ...model }: SceneProps & { url: string
   );
 }
 
-export default function HeartViewer({ viewRequest, onModelError, ...scene }: HeartViewerProps) {
+export default function HeartViewer({
+  viewRequest,
+  onModelError,
+  turning = false,
+  endlessTurn = false,
+  zoom = true,
+  onTurnDone,
+  ...scene
+}: HeartViewerProps) {
   const standIn = <StandInScene {...scene} />;
 
   return (
@@ -179,8 +229,16 @@ export default function HeartViewer({ viewRequest, onModelError, ...scene }: Hea
         standIn
       )}
 
-      <OrbitControls makeDefault enablePan={false} minDistance={3.8} maxDistance={10} target={TARGET} />
+      <OrbitControls
+        makeDefault
+        enablePan={false}
+        enableZoom={zoom}
+        minDistance={3.8}
+        maxDistance={10}
+        target={TARGET}
+      />
       <CameraRig request={viewRequest} reducedMotion={scene.reducedMotion} />
+      <Turntable turning={turning} endless={endlessTurn} onDone={onTurnDone} />
     </Canvas>
   );
 }

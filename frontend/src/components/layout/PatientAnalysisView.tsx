@@ -1,26 +1,34 @@
-// The Patient analysis tab (PRODUCT_SPEC §4.2): input · 3D viewer · results.
+// The Analysis page (PRODUCT_SPEC §4.2): input · 3D viewer · results for the patient in analysis.
 // 1280 px and up: three columns. 768 to 1279 px: viewer on top, input and results below.
 // Selection, hover and the camera request live here, so the viewer and the panels stay in sync.
+// The patient itself is loaded by the Workspace, from the Patients or the New patient page.
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import type { SamplePatient, TargetId } from "../../api/types";
+import type { TabId } from "../../config/copy";
 import { isVesselId, VESSELS, type VesselId } from "../../config/vessels";
 import { ViewerPanel } from "../../scene/ViewerPanel";
 import type { ViewId, ViewRequest } from "../../scene/ViewPresets";
-import { useMeta } from "../../state/MetaContext";
-import { useAnalysis } from "../../state/useAnalysis";
+import type { Analysis } from "../../state/useAnalysis";
 import { PatientPanel } from "../patient/PatientPanel";
 import { ResultsPanel } from "../results/ResultsPanel";
 
 interface PatientAnalysisViewProps {
   samples: SamplePatient[];
+  analysis: Analysis;
+  onNavigate: (tab: TabId) => void;
+  active?: boolean; // false while another page is on screen
   resetCount?: number; // each increase runs "Reset demo"
 }
 
-export function PatientAnalysisView({ samples, resetCount = 0 }: PatientAnalysisViewProps) {
-  const meta = useMeta();
-  const analysis = useAnalysis(meta.features);
-  const { state, loadSample } = analysis;
+export function PatientAnalysisView({
+  samples,
+  analysis,
+  onNavigate,
+  active = true,
+  resetCount = 0,
+}: PatientAnalysisViewProps) {
+  const { state } = analysis;
   const [selectedTarget, setSelectedTarget] = useState<TargetId>("cad");
   const [hoveredVessel, setHoveredVessel] = useState<VesselId | null>(null);
   const [viewRequest, setViewRequest] = useState<ViewRequest | null>(null);
@@ -31,25 +39,16 @@ export function PatientAnalysisView({ samples, resetCount = 0 }: PatientAnalysis
     [],
   );
 
-  // UF-1: the first sample loads by itself on the first visit.
-  const started = useRef(false);
-  useEffect(() => {
-    if (started.current || samples.length === 0) return;
-    started.current = true;
-    loadSample(samples[0]);
-  }, [samples, loadSample]);
-
-  // Reset demo: first sample, no edits, CAD selected, starting camera.
+  // Reset demo: CAD selected, dataset labels hidden, starting camera (the Workspace reloads the patient).
   const handledReset = useRef(resetCount);
   useEffect(() => {
-    if (resetCount === handledReset.current || samples.length === 0) return;
+    if (resetCount === handledReset.current) return;
     handledReset.current = resetCount;
-    loadSample(samples[0]);
     setSelectedTarget("cad");
     setHoveredVessel(null);
     setShowGroundTruth(false);
     requestView("reset");
-  }, [resetCount, samples, loadSample, requestView]);
+  }, [resetCount, requestView]);
 
   // Chosen from the list, an artery may be on the far side: turn the heart to show it.
   const selectFromList = useCallback(
@@ -72,7 +71,7 @@ export function PatientAnalysisView({ samples, resetCount = 0 }: PatientAnalysis
 
   return (
     <div className="grid items-start gap-6 md:grid-cols-2 xl:grid-cols-[340px_minmax(0,1fr)_380px]">
-      <PatientPanel samples={samples} analysis={analysis} />
+      <PatientPanel samples={samples} analysis={analysis} onNavigate={onNavigate} />
       <div className="md:order-first md:col-span-2 xl:sticky xl:top-4 xl:order-none xl:col-span-1">
         <ViewerPanel
           predictions={shown?.predictions ?? null}
@@ -80,6 +79,7 @@ export function PatientAnalysisView({ samples, resetCount = 0 }: PatientAnalysis
           selectedTarget={selectedTarget}
           hoveredVessel={hoveredVessel}
           viewRequest={viewRequest}
+          active={active}
           onRequestView={requestView}
           onSelectTarget={setSelectedTarget}
           onHoverVessel={setHoveredVessel}

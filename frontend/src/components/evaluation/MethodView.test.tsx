@@ -79,15 +79,15 @@ describe("Model & method view (F9)", () => {
     expect(methodRows()).toEqual({
       Dataset: "extention of Z-Alizadeh sani dataset: 303 patients (CC BY 4.0).",
       "Held-out sample patients":
-        "6 sample patients were held out by a fixed rule (seed 42) before any training; they are not used for cross-validation or the final fit.",
-      "Training rows": "297 patients, used for cross-validation and for the final fit.",
+        "12 sample patients were held out by a fixed rule (seed 42) before any training; they are not used for cross-validation or the final fit.",
+      "Training rows": "291 patients, used for cross-validation and for the final fit.",
       Validation:
         "Repeated stratified 5-fold cross-validation, 5 repeats (25 folds, seed 42). Preprocessing is refitted inside every fold.",
       "Leakage guard": "These dataset columns are never inputs to any model: LAD, LCX, RCA, Cath.",
       "Decision threshold": "0.5: a target is predicted when its probability is at or above it.",
       "Model selection":
         "The candidate with the highest mean ROC-AUC is selected; logistic regression is preferred when it is within 0.01 of the best. No hyperparameters are tuned.",
-      "Model version": "20261007T1423Z-7393432, trained 2026-10-07 14:23:00 UTC.",
+      "Model version": "20261011T1756Z-7393432, trained 2026-10-11 17:56:54 UTC.",
     });
   });
 
@@ -121,12 +121,12 @@ describe("Model & method view (F9)", () => {
     ]);
     expect(rowHeaders(overview)).toEqual(["CAD", "LAD", "LCX", "RCA"]);
     expect(cells(overview, /^CAD/)).toEqual([
-      "Logistic regression", "212 / 85", "0.917 ± 0.031", "0.857 ± 0.031", "0.897 ± 0.031", "0.887 ± 0.031",
+      "Logistic regression", "210 / 81", "0.917 ± 0.031", "0.857 ± 0.031", "0.897 ± 0.031", "0.887 ± 0.031",
       "0.767 ± 0.031", "0.897 ± 0.031", "0.957 ± 0.031", "0.083 ± 0.031",
     ]);
-    expect(cells(overview, /^LAD/).slice(0, 3)).toEqual(["Random forest", "174 / 123", "0.855 ± 0.031"]);
-    expect(cells(overview, /^LCX/).slice(0, 3)).toEqual(["Random forest", "116 / 181", "0.739 ± 0.031"]);
-    expect(cells(overview, /^RCA/).slice(0, 3)).toEqual(["Logistic regression", "113 / 184", "0.725 ± 0.031"]);
+    expect(cells(overview, /^LAD/).slice(0, 3)).toEqual(["Random forest", "173 / 118", "0.855 ± 0.031"]);
+    expect(cells(overview, /^LCX/).slice(0, 3)).toEqual(["Random forest", "116 / 175", "0.739 ± 0.031"]);
+    expect(cells(overview, /^RCA/).slice(0, 3)).toEqual(["Logistic regression", "111 / 180", "0.725 ± 0.031"]);
     // The caption names the table and says what the numbers are.
     expect(
       section("Selected models").getByRole("table", { name: /mean ± standard deviation over the folds/ }),
@@ -146,8 +146,8 @@ describe("Model & method view (F9)", () => {
     expect(cells(table, /^Baseline/)[0]).toBe("0.500 ± 0.000");
     expect(within(table).getByRole("row", { name: /^Logistic regression/ }).className).toBe("bg-brand-soft");
     expect(within(table).getByRole("row", { name: /^Random forest/ }).className).toBe("");
-    expect(section("Results by target").getByText(/212 positive and 85 negative/).textContent).toBe(
-      "CAD · Coronary artery disease. 212 positive and 85 negative training patients (71.4% positive). Selected model: Logistic regression. Within 0.01 of best; simplest model preferred.",
+    expect(section("Results by target").getByText(/210 positive and 81 negative/).textContent).toBe(
+      "CAD · Coronary artery disease. 210 positive and 81 negative training patients (72.2% positive). Selected model: Logistic regression. Within 0.01 of best; simplest model preferred.",
     );
   });
 
@@ -204,7 +204,7 @@ describe("Model & method view (F9)", () => {
     expect(plots()[1][1]).toBe(
       "Calibration of the Random forest model for LAD: observed fraction against mean predicted probability",
     );
-    expect(section("Results by target").getByText(/174 positive and 123 negative/).textContent).toContain(
+    expect(section("Results by target").getByText(/173 positive and 118 negative/).textContent).toContain(
       "Selected model: Random forest. Highest mean ROC-AUC.",
     );
   });
